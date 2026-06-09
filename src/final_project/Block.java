@@ -18,17 +18,19 @@ public class Block {
     BlockType type;
     boolean burning = false;
     boolean frozen = false;
+    int maxHealth;
 
     private Pane root;
 
     public Block(double x, double y, int health, BlockType type, Pane root) {
         this.root = root;
         this.health = health;
+        this.maxHealth = health;
         this.type = type;
 
         rect = new Rectangle(x + 2, y + 2, GameConfig.BLOCK_SIZE - 4, GameConfig.BLOCK_SIZE - 4);
-        rect.setArcWidth(16);
-        rect.setArcHeight(16);
+        rect.setArcWidth(0);
+        rect.setArcHeight(0);
         rect.setEffect(new DropShadow(8, Color.BLACK));
 
         text = new Text();

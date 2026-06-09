@@ -26,4 +26,13 @@ public class GameConfig {
     public static final long PIERCE_DAMAGE_COOLDOWN_MS = 210;
 
     public static final double SHRINK_BALL_SIZE = 0.3;
+
+    public static final double POWER_UP_SPAWN_CHANCE_START = 0.2;
+    public static final double POWER_UP_SPAWN_CHANCE_UPGRADE_AMOUNT = 0.06;
+    public static final double POWER_UP_SPAWN_CHANCE_MAX = 0.70;
+
+    public static final int POWER_UP_UPGRADE_COST_START = 80;
+    public static final int POWER_UP_UPGRADE_COST_INCREASE = 60;
+
+    public static final double COIN_REWARD_MULTIPLIER = 2.0;
 }

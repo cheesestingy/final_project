@@ -62,6 +62,9 @@ public class GameController {
     private int money = 0;
     private int ballDamage = 1;
     private int damageUpgradeCost = 50;
+    private double powerUpSpawnChance = GameConfig.POWER_UP_SPAWN_CHANCE_START;
+    private int powerUpUpgradeCost = GameConfig.POWER_UP_UPGRADE_COST_START;
+    private Button upgradePowerUpBtn;
 
 
 
@@ -193,17 +196,29 @@ public class GameController {
         shopTitle.setY(130);
 
         upgradeDamageBtn = new Button();
-        updateShopUI();
         upgradeDamageBtn.setLayoutX(GameConfig.PLAYFIELD_MAX_X + 20);
         upgradeDamageBtn.setLayoutY(150);
         upgradeDamageBtn.setStyle("-fx-background-color: #2ecc71; -fx-text-fill: white; -fx-font-weight: bold;");
         upgradeDamageBtn.setOnAction(e -> handleUpgradePurchase());
+        upgradePowerUpBtn = new Button();
+        upgradePowerUpBtn.setLayoutX(GameConfig.PLAYFIELD_MAX_X + 20);
+        upgradePowerUpBtn.setLayoutY(250);
+        upgradePowerUpBtn.setStyle("-fx-background-color: #9b59b6; -fx-text-fill: white; -fx-font-weight: bold;");
+        upgradePowerUpBtn.setOnAction(e -> handlePowerUpUpgradePurchase());
 
         remainingBallsText = new Text("x" + totalBalls);
         remainingBallsText.setFont(Font.font("Arial", FontWeight.BOLD, 14));
         remainingBallsText.setFill(Color.WHITE);
-
-        root.getChildren().addAll(waveText, highScoreText, moneyText, shopTitle, upgradeDamageBtn, remainingBallsText);
+        updateShopUI();
+        root.getChildren().addAll(
+                waveText,
+                highScoreText,
+                moneyText,
+                shopTitle,
+                upgradeDamageBtn,
+                upgradePowerUpBtn,
+                remainingBallsText
+        );
     }
 
     private void setupGameOverMenu() {
@@ -243,10 +258,54 @@ public class GameController {
         }
     }
 
+    private void handlePowerUpUpgradePurchase() {
+        if (state == GameState.GAME_OVER) return;
+
+        if (money >= powerUpUpgradeCost &&
+                powerUpSpawnChance < GameConfig.POWER_UP_SPAWN_CHANCE_MAX) {
+
+            money -= powerUpUpgradeCost;
+            powerUpSpawnChance += GameConfig.POWER_UP_SPAWN_CHANCE_UPGRADE_AMOUNT;
+
+            if (powerUpSpawnChance > GameConfig.POWER_UP_SPAWN_CHANCE_MAX) {
+                powerUpSpawnChance = GameConfig.POWER_UP_SPAWN_CHANCE_MAX;
+            }
+
+            powerUpUpgradeCost += GameConfig.POWER_UP_UPGRADE_COST_INCREASE;
+            updateShopUI();
+        }
+    }
+
     private void updateShopUI() {
         moneyText.setText("Money: $" + money);
-        upgradeDamageBtn.setText("Ball Damage +\nCost: $" + damageUpgradeCost + "\nCurrent: " + ballDamage);
+
+        upgradeDamageBtn.setText(
+                "Ball Damage +\n" +
+                        "Cost: $" + damageUpgradeCost + "\n" +
+                        "Current: " + ballDamage
+        );
+
         upgradeDamageBtn.setDisable(money < damageUpgradeCost);
+
+        int percent = (int) Math.round(powerUpSpawnChance * 100);
+
+        upgradePowerUpBtn.setText(
+                "Power Up Rate +\n" +
+                        "Cost: $" + powerUpUpgradeCost + "\n" +
+                        "Current: " + percent + "%"
+        );
+
+        boolean maxed = powerUpSpawnChance >= GameConfig.POWER_UP_SPAWN_CHANCE_MAX;
+
+        upgradePowerUpBtn.setDisable(money < powerUpUpgradeCost || maxed);
+
+        if (maxed) {
+            upgradePowerUpBtn.setText(
+                    "Power Up Rate\n" +
+                            "MAX\n" +
+                            "Current: " + percent + "%"
+            );
+        }
     }
 
     private void updateRemainingBallsUI() {
@@ -647,7 +706,7 @@ public class GameController {
     }
 
     private void handleBlockDestroyed(Block block) {
-        money += 10;
+        money += (int) Math.round(block.maxHealth * GameConfig.COIN_REWARD_MULTIPLIER);
 
         if (block.type == BlockType.EXTRA_BALL) {
             extraBallsEarned++;
@@ -801,6 +860,8 @@ public class GameController {
         ballDamage = 1;
         damageUpgradeCost = 50;
         firstBallLanded = false;
+        powerUpSpawnChance = GameConfig.POWER_UP_SPAWN_CHANCE_START;
+        powerUpUpgradeCost = GameConfig.POWER_UP_UPGRADE_COST_START;
 
         fireRoundsAvailable = 0;
         fireRoundActive = false;
@@ -818,6 +879,8 @@ public class GameController {
         shrinkRoundsAvailable = 0;
         shrinkRoundActive = false;
         forceShrinkRound = false;
+
+
 
 
         startX = GameConfig.PLAYFIELD_MIN_X + (GameConfig.PLAYFIELD_WIDTH / 2.0);
@@ -862,7 +925,7 @@ public class GameController {
             if (random.nextDouble() > 0.4) {
                 BlockType type = BlockType.NORMAL;
 
-                if (!specialSpawned && random.nextDouble() > 0.85) {
+                if (!specialSpawned && random.nextDouble() < powerUpSpawnChance) {
                     double powerRoll = random.nextDouble();
 
                     if (powerRoll < 0.45) {
