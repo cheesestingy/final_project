@@ -39,9 +39,8 @@ public class main extends Application {
 
     private static final double BLOCK_SIZE = PLAYFIELD_WIDTH / 8.0;
     private static final int BALL_RADIUS = 11;
-    private static final double BALL_SPEED = 5.0;
+    private static final double BALL_SPEED = 8.0; // Increased Ball Speed
 
-    // Warning line placed roughly one block's height above the floor
     private static final double WARNING_LINE_Y = PLAYFIELD_MAX_Y - BLOCK_SIZE - 20;
 
     private Pane root;
@@ -58,7 +57,6 @@ public class main extends Application {
     private List<Ball> balls = new ArrayList<>();
     private List<Block> blocks = new ArrayList<>();
 
-    // Game Progression Variables
     private int wave = 1;
     private int highestWave = 1;
     private int totalBalls = 1;
@@ -71,7 +69,8 @@ public class main extends Application {
     private double nextStartX = startX;
     private boolean firstBallLanded = false;
 
-    private enum GameState { AIMING, SHOOTING, WAITING, GAME_OVER }
+    private enum GameState {AIMING, SHOOTING, WAITING, GAME_OVER}
+
     private GameState state = GameState.AIMING;
 
     private double aimVx, aimVy;
@@ -86,18 +85,16 @@ public class main extends Application {
         root = new Pane();
         root.setStyle("-fx-background-color: #0f0f1a;");
 
-        // Playfield Background
         Rectangle playfield = new Rectangle(PLAYFIELD_MIN_X, PLAYFIELD_MIN_Y, PLAYFIELD_WIDTH, PLAYFIELD_HEIGHT);
         playfield.setFill(Color.web("#1a1a2e"));
         playfield.setStroke(Color.WHITE);
         playfield.setStrokeWidth(2);
         root.getChildren().add(playfield);
 
-        // Visual Warning Line
         Line warningLine = new Line(PLAYFIELD_MIN_X, WARNING_LINE_Y, PLAYFIELD_MAX_X, WARNING_LINE_Y);
-        warningLine.setStroke(Color.web("#e74c3c")); // Red
+        warningLine.setStroke(Color.web("#e74c3c"));
         warningLine.setStrokeWidth(2);
-        warningLine.getStrokeDashArray().addAll(8d, 8d); // Dashed effect
+        warningLine.getStrokeDashArray().addAll(8d, 8d);
         root.getChildren().add(warningLine);
 
         setupUI();
@@ -133,7 +130,6 @@ public class main extends Application {
     }
 
     private void setupUI() {
-        // Left Side UI (Wave & High Score)
         waveText = new Text("Wave: " + wave);
         waveText.setFont(Font.font("Arial", FontWeight.BOLD, 24));
         waveText.setFill(Color.WHITE);
@@ -146,7 +142,6 @@ public class main extends Application {
         highScoreText.setX(20);
         highScoreText.setY(110);
 
-        // Right Side UI (Economy & Shop)
         moneyText = new Text("Money: $0");
         moneyText.setFont(Font.font("Arial", FontWeight.BOLD, 20));
         moneyText.setFill(Color.GOLD);
@@ -166,7 +161,6 @@ public class main extends Application {
         upgradeDamageBtn.setStyle("-fx-background-color: #2ecc71; -fx-text-fill: white; -fx-font-weight: bold;");
         upgradeDamageBtn.setOnAction(e -> handleUpgradePurchase());
 
-        // Balls Remaining Text
         remainingBallsText = new Text("x" + totalBalls);
         remainingBallsText.setFont(Font.font("Arial", FontWeight.BOLD, 14));
         remainingBallsText.setFill(Color.WHITE);
@@ -306,7 +300,9 @@ public class main extends Application {
                     bounced = true;
                 }
 
-                if (bounced) { aimPath.getPoints().addAll(simX, simY); }
+                if (bounced) {
+                    aimPath.getPoints().addAll(simX, simY);
+                }
 
                 if (simY + BALL_RADIUS >= PLAYFIELD_MAX_Y) {
                     aimPath.getPoints().addAll(simX, simY);
@@ -357,7 +353,7 @@ public class main extends Application {
             boolean allBallsStopped = true;
 
             for (Ball b : balls) {
-                if (b.active) {
+                if (b.active || b.returning) {
                     allBallsStopped = false;
                     moveBall(b);
                 }
@@ -370,6 +366,18 @@ public class main extends Application {
     }
 
     private void moveBall(Ball b) {
+        if (b.returning) {
+            b.circle.setCenterX(b.circle.getCenterX() + b.vx);
+
+            if (Math.abs(nextStartX - b.circle.getCenterX()) <= Math.abs(b.vx)) {
+                b.circle.setCenterX(nextStartX);
+                b.vx = 0;
+                b.active = false;
+                b.returning = false;
+            }
+            return;
+        }
+
         b.circle.setCenterX(b.circle.getCenterX() + b.vx);
         checkWallCollisions(b);
         checkBlockCollisions(b, true);
@@ -379,15 +387,28 @@ public class main extends Application {
         checkBlockCollisions(b, false);
 
         if (b.circle.getCenterY() + BALL_RADIUS >= PLAYFIELD_MAX_Y) {
-            b.active = false;
             b.circle.setCenterY(startY);
+            b.vy = 0;
 
             if (!firstBallLanded) {
                 firstBallLanded = true;
                 nextStartX = b.circle.getCenterX();
                 nextStartX = Math.max(PLAYFIELD_MIN_X + BALL_RADIUS, Math.min(PLAYFIELD_MAX_X - BALL_RADIUS, nextStartX));
+
+                b.circle.setCenterX(nextStartX);
+                b.vx = 0;
+                b.active = false;
+            } else {
+                b.returning = true;
+                double distance = nextStartX - b.circle.getCenterX();
+                if (Math.abs(distance) < 1.0) {
+                    b.circle.setCenterX(nextStartX);
+                    b.active = false;
+                    b.returning = false;
+                } else {
+                    b.vx = Math.signum(distance) * (BALL_SPEED * 2.0);
+                }
             }
-            b.circle.setCenterX(nextStartX);
         }
     }
 
@@ -395,8 +416,7 @@ public class main extends Application {
         if (b.circle.getCenterX() - BALL_RADIUS <= PLAYFIELD_MIN_X) {
             b.circle.setCenterX(PLAYFIELD_MIN_X + BALL_RADIUS);
             if (b.vx < 0) b.vx = -b.vx;
-        }
-        else if (b.circle.getCenterX() + BALL_RADIUS >= PLAYFIELD_MAX_X) {
+        } else if (b.circle.getCenterX() + BALL_RADIUS >= PLAYFIELD_MAX_X) {
             b.circle.setCenterX(PLAYFIELD_MAX_X - BALL_RADIUS);
             if (b.vx > 0) b.vx = -b.vx;
         }
@@ -421,20 +441,18 @@ public class main extends Application {
                     b.circle.setCenterY(b.circle.getCenterY() + (b.vy > 0 ? 1 : -1));
                 }
 
-                if (block.isSpecial) {
-                    extraBallsEarned++;
+                // Unified Damage Logic
+                block.health -= ballDamage;
+                if (block.health <= 0) {
+                    money += 10;
+                    if (block.isSpecial) {
+                        extraBallsEarned++;
+                    }
+                    updateShopUI();
                     block.remove();
                     it.remove();
                 } else {
-                    block.health -= ballDamage;
-                    if (block.health <= 0) {
-                        money += 10;
-                        updateShopUI();
-                        block.remove();
-                        it.remove();
-                    } else {
-                        block.updateVisuals();
-                    }
+                    block.updateVisuals();
                 }
                 break;
             }
@@ -445,11 +463,19 @@ public class main extends Application {
         double circleDistanceX = Math.abs(c.getCenterX() - r.getX() - r.getWidth() / 2);
         double circleDistanceY = Math.abs(c.getCenterY() - r.getY() - r.getHeight() / 2);
 
-        if (circleDistanceX > (r.getWidth() / 2 + c.getRadius())) { return false; }
-        if (circleDistanceY > (r.getHeight() / 2 + c.getRadius())) { return false; }
+        if (circleDistanceX > (r.getWidth() / 2 + c.getRadius())) {
+            return false;
+        }
+        if (circleDistanceY > (r.getHeight() / 2 + c.getRadius())) {
+            return false;
+        }
 
-        if (circleDistanceX <= (r.getWidth() / 2)) { return true; }
-        if (circleDistanceY <= (r.getHeight() / 2)) { return true; }
+        if (circleDistanceX <= (r.getWidth() / 2)) {
+            return true;
+        }
+        if (circleDistanceY <= (r.getHeight() / 2)) {
+            return true;
+        }
 
         double cornerDistanceSq = Math.pow(circleDistanceX - r.getWidth() / 2, 2) +
                 Math.pow(circleDistanceY - r.getHeight() / 2, 2);
@@ -475,7 +501,6 @@ public class main extends Application {
         boolean isGameOver = false;
         for (Block block : blocks) {
             block.shiftDown();
-            // Trigger Game Over if a block crosses the warning line
             if (block.rect.getY() + BLOCK_SIZE >= WARNING_LINE_Y) {
                 isGameOver = true;
             }
@@ -494,11 +519,8 @@ public class main extends Application {
     private void triggerGameOver() {
         state = GameState.GAME_OVER;
         gameOverWaveText.setText("You reached Wave: " + wave);
-
-        // This is the magic line that fixes the Z-Index!
         gameOverMenu.toFront();
         gameOverMenu.setVisible(true);
-
         updateRemainingBallsUI();
     }
 
@@ -536,12 +558,10 @@ public class main extends Application {
         int columns = 8;
         boolean specialSpawned = false;
 
-        // Health Scaling Logic
         int blockHealth;
         if (wave <= 10) {
             blockHealth = wave;
         } else {
-            // Scales multiplicatively by 30% per wave after 10
             blockHealth = (int) Math.round(10 * Math.pow(1.3, wave - 10));
         }
 
@@ -553,8 +573,7 @@ public class main extends Application {
                     specialSpawned = true;
                 }
 
-                // Pass blockHealth instead of wave
-                Block block = new Block(PLAYFIELD_MIN_X + (i * BLOCK_SIZE), PLAYFIELD_MIN_Y + BLOCK_SIZE, isSpecial ? 0 : blockHealth, isSpecial);
+                Block block = new Block(PLAYFIELD_MIN_X + (i * BLOCK_SIZE), PLAYFIELD_MIN_Y + BLOCK_SIZE, blockHealth, isSpecial);
                 blocks.add(block);
             }
         }
@@ -566,6 +585,7 @@ public class main extends Application {
         Circle circle;
         double vx = 0, vy = 0;
         boolean active = false;
+        boolean returning = false;
 
         Ball(double x, double y) {
             circle = new Circle(x, y, BALL_RADIUS, Color.WHITE);
@@ -576,6 +596,7 @@ public class main extends Application {
     class Block {
         Rectangle rect;
         Text text;
+        Circle ring;
         int health;
         boolean isSpecial;
 
@@ -589,36 +610,46 @@ public class main extends Application {
             text.setFont(Font.font("Arial", FontWeight.BOLD, 22));
 
             if (isSpecial) {
-                rect.setFill(Color.GOLD);
-                text.setText("+1");
+                ring = new Circle(x + BLOCK_SIZE / 2, y + BLOCK_SIZE / 2, (BLOCK_SIZE / 2) - 8);
+                ring.setFill(Color.TRANSPARENT);
+                ring.setStroke(Color.BLACK);
+                ring.setStrokeWidth(3);
+
                 text.setFill(Color.BLACK);
-                text.setX(x + (BLOCK_SIZE - text.getLayoutBounds().getWidth()) / 2);
+                updateVisuals();
+                root.getChildren().addAll(rect, ring, text);
             } else {
                 text.setFill(Color.WHITE);
                 updateVisuals();
+                root.getChildren().addAll(rect, text);
             }
 
             text.setY(y + (BLOCK_SIZE + text.getLayoutBounds().getHeight() / 2) / 2 - 2);
-            root.getChildren().addAll(rect, text);
         }
 
         void updateVisuals() {
+            // Unify text update logic to always show HP integer
             text.setText(String.valueOf(health));
             text.setX(rect.getX() + (rect.getWidth() - text.getLayoutBounds().getWidth()) / 2);
 
-            if (!isSpecial) {
-                double hue = (health * 12) % 360;
-                rect.setFill(Color.hsb(hue, 0.75, 0.9));
-            }
+            double hue = (health * 12) % 360;
+            rect.setFill(Color.hsb(hue, 0.75, 0.9));
         }
 
         void shiftDown() {
             rect.setY(rect.getY() + BLOCK_SIZE);
             text.setY(text.getY() + BLOCK_SIZE);
+            if (isSpecial) {
+                ring.setCenterY(ring.getCenterY() + BLOCK_SIZE);
+            }
         }
 
         void remove() {
-            root.getChildren().removeAll(rect, text);
+            if (isSpecial) {
+                root.getChildren().removeAll(rect, ring, text);
+            } else {
+                root.getChildren().removeAll(rect, text);
+            }
         }
     }
 
