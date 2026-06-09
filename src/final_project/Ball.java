@@ -10,9 +10,15 @@ public class Ball {
     double vy = 0;
     boolean active = false;
     boolean returning = false;
+    boolean fireBall = false;
 
     public Ball(double x, double y, Pane root) {
         circle = new Circle(x, y, GameConfig.BALL_RADIUS, Color.WHITE);
         root.getChildren().add(circle);
+    }
+
+    public void setFireBall(boolean fireBall) {
+        this.fireBall = fireBall;
+        circle.setFill(fireBall ? Color.ORANGERED : Color.WHITE);
     }
 }

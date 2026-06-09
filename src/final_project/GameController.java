@@ -45,6 +45,9 @@ public class GameController {
     private int ballDamage = 1;
     private int damageUpgradeCost = 50;
 
+    private int fireRoundsAvailable = 0;
+    private boolean fireRoundActive = false;
+
     private double startX = GameConfig.PLAYFIELD_MIN_X + (GameConfig.PLAYFIELD_WIDTH / 2.0);
     private final double startY = GameConfig.PLAYFIELD_MAX_Y - GameConfig.BALL_RADIUS;
     private double nextStartX = startX;
@@ -233,12 +236,21 @@ public class GameController {
     private void handleMouseRelease(MouseEvent e) {
         if (state == GameState.AIMING && aimPath.isVisible()) {
             aimPath.setVisible(false);
+
             if (aimVy < -1.0) {
                 state = GameState.SHOOTING;
                 ballsFired = 0;
                 fireDelayCounter = 0;
                 firstBallLanded = false;
                 extraBallsEarned = 0;
+
+                if (fireRoundsAvailable > 0) {
+                    fireRoundActive = true;
+                    fireRoundsAvailable--;
+                } else {
+                    fireRoundActive = false;
+                }
+
                 updateRemainingBallsUI();
             }
         }
@@ -268,6 +280,7 @@ public class GameController {
             for (int i = 0; i < maxSteps; i++) {
                 simX += dirX * stepLength;
                 simY += dirY * stepLength;
+
                 dummy.setCenterX(simX);
                 dummy.setCenterY(simY);
 
@@ -327,9 +340,12 @@ public class GameController {
 
             if (fireDelayCounter >= 12 && ballsFired < totalBalls) {
                 Ball b = balls.get(ballsFired);
+
                 b.vx = aimVx;
                 b.vy = aimVy;
                 b.active = true;
+                b.setFireBall(fireRoundActive);
+
                 ballsFired++;
                 fireDelayCounter = 0;
                 updateRemainingBallsUI();
@@ -420,6 +436,7 @@ public class GameController {
             if (b.vy < 0) b.vy = -b.vy;
         }
     }
+
     private void checkBlockCollisions(Ball b) {
         Iterator<Block> it = blocks.iterator();
 
@@ -427,76 +444,120 @@ public class GameController {
             Block block = it.next();
 
             if (isIntersecting(b.circle, block.rect)) {
-
-                double ballX = b.circle.getCenterX();
-                double ballY = b.circle.getCenterY();
-
-                double blockCenterX = block.rect.getX() + block.rect.getWidth() / 2.0;
-                double blockCenterY = block.rect.getY() + block.rect.getHeight() / 2.0;
-
-                double dx = ballX - blockCenterX;
-                double dy = ballY - blockCenterY;
-
-                double overlapX = block.rect.getWidth() / 2.0 + b.circle.getRadius() - Math.abs(dx);
-                double overlapY = block.rect.getHeight() / 2.0 + b.circle.getRadius() - Math.abs(dy);
-
-                if (overlapX < overlapY) {
-                    b.vx = -b.vx;
-
-                    if (dx > 0) {
-                        b.circle.setCenterX(block.rect.getX() + block.rect.getWidth() + b.circle.getRadius());
-                    } else {
-                        b.circle.setCenterX(block.rect.getX() - b.circle.getRadius());
-                    }
-                } else {
-                    b.vy = -b.vy;
-
-                    if (dy > 0) {
-                        b.circle.setCenterY(block.rect.getY() + block.rect.getHeight() + b.circle.getRadius());
-                    } else {
-                        b.circle.setCenterY(block.rect.getY() - b.circle.getRadius());
-                    }
-                }
+                bounceFromBlock(b, block);
 
                 block.health -= ballDamage;
+                boolean destroyed = block.health <= 0;
 
-                if (block.health <= 0) {
-                    money += 10;
-
-                    if (block.isSpecial) {
-                        extraBallsEarned++;
-                    }
-
-                    updateShopUI();
+                if (destroyed) {
+                    handleBlockDestroyed(block);
                     block.remove();
                     it.remove();
                 } else {
                     block.updateVisuals();
                 }
 
+                if (b.fireBall) {
+                    fireExplosion(block);
+                }
+
                 break;
             }
         }
     }
+
+    private void bounceFromBlock(Ball b, Block block) {
+        double ballX = b.circle.getCenterX();
+        double ballY = b.circle.getCenterY();
+
+        double blockCenterX = block.rect.getX() + block.rect.getWidth() / 2.0;
+        double blockCenterY = block.rect.getY() + block.rect.getHeight() / 2.0;
+
+        double dx = ballX - blockCenterX;
+        double dy = ballY - blockCenterY;
+
+        double overlapX = block.rect.getWidth() / 2.0 + b.circle.getRadius() - Math.abs(dx);
+        double overlapY = block.rect.getHeight() / 2.0 + b.circle.getRadius() - Math.abs(dy);
+
+        if (overlapX < overlapY) {
+            b.vx = -b.vx;
+
+            if (dx > 0) {
+                b.circle.setCenterX(block.rect.getX() + block.rect.getWidth() + b.circle.getRadius());
+            } else {
+                b.circle.setCenterX(block.rect.getX() - b.circle.getRadius());
+            }
+        } else {
+            b.vy = -b.vy;
+
+            if (dy > 0) {
+                b.circle.setCenterY(block.rect.getY() + block.rect.getHeight() + b.circle.getRadius());
+            } else {
+                b.circle.setCenterY(block.rect.getY() - b.circle.getRadius());
+            }
+        }
+    }
+
+    private void fireExplosion(Block centerBlock) {
+        double centerX = centerBlock.rect.getX() + centerBlock.rect.getWidth() / 2.0;
+        double centerY = centerBlock.rect.getY() + centerBlock.rect.getHeight() / 2.0;
+
+        for (Block block : blocks) {
+            double blockX = block.rect.getX() + block.rect.getWidth() / 2.0;
+            double blockY = block.rect.getY() + block.rect.getHeight() / 2.0;
+
+            double dx = blockX - centerX;
+            double dy = blockY - centerY;
+            double distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance <= GameConfig.FIRE_EXPLOSION_RADIUS) {
+                block.setBurning(true);
+            }
+        }
+    }
+
+    private void applyBurnDamage() {
+        Iterator<Block> it = blocks.iterator();
+
+        while (it.hasNext()) {
+            Block block = it.next();
+
+            if (block.burning) {
+                int burnDamage = Math.max(1, (int) Math.ceil(block.health * GameConfig.BURN_PERCENT));
+                block.health -= burnDamage;
+
+                if (block.health <= 0) {
+                    handleBlockDestroyed(block);
+                    block.remove();
+                    it.remove();
+                } else {
+                    block.updateVisuals();
+                }
+            }
+        }
+    }
+
+    private void handleBlockDestroyed(Block block) {
+        money += 10;
+
+        if (block.type == BlockType.EXTRA_BALL) {
+            extraBallsEarned++;
+        } else if (block.type == BlockType.FIRE_POWER) {
+            fireRoundsAvailable++;
+        }
+
+        updateShopUI();
+    }
+
     private boolean isIntersecting(Circle c, Rectangle r) {
         double circleDistanceX = Math.abs(c.getCenterX() - r.getX() - r.getWidth() / 2);
         double circleDistanceY = Math.abs(c.getCenterY() - r.getY() - r.getHeight() / 2);
 
-        if (circleDistanceX > (r.getWidth() / 2 + c.getRadius())) {
-            return false;
-        }
+        if (circleDistanceX > (r.getWidth() / 2 + c.getRadius())) return false;
+        if (circleDistanceY > (r.getHeight() / 2 + c.getRadius())) return false;
 
-        if (circleDistanceY > (r.getHeight() / 2 + c.getRadius())) {
-            return false;
-        }
-
-        if (circleDistanceX <= (r.getWidth() / 2)) {
-            return true;
-        }
-
-        if (circleDistanceY <= (r.getHeight() / 2)) {
-            return true;
-        }
+        if (circleDistanceX <= (r.getWidth() / 2)) return true;
+        if (circleDistanceY <= (r.getHeight() / 2)) return true;
 
         double cornerDistanceSq =
                 Math.pow(circleDistanceX - r.getWidth() / 2, 2)
@@ -506,8 +567,11 @@ public class GameController {
     }
 
     private void endWave() {
+        applyBurnDamage();
+
         startX = nextStartX;
         wave++;
+        fireRoundActive = false;
 
         if (wave > highestWave) {
             highestWave = wave;
@@ -551,14 +615,10 @@ public class GameController {
     }
 
     private void resetGame() {
-        for (Block b : blocks) {
-            b.remove();
-        }
+        for (Block b : blocks) b.remove();
         blocks.clear();
 
-        for (Ball b : balls) {
-            root.getChildren().remove(b.circle);
-        }
+        for (Ball b : balls) root.getChildren().remove(b.circle);
         balls.clear();
 
         wave = 1;
@@ -569,6 +629,8 @@ public class GameController {
         ballDamage = 1;
         damageUpgradeCost = 50;
         firstBallLanded = false;
+        fireRoundsAvailable = 0;
+        fireRoundActive = false;
 
         startX = GameConfig.PLAYFIELD_MIN_X + (GameConfig.PLAYFIELD_WIDTH / 2.0);
         nextStartX = startX;
@@ -598,10 +660,14 @@ public class GameController {
 
         for (int i = 0; i < columns; i++) {
             if (random.nextDouble() > 0.4) {
-                boolean isSpecial = false;
+                BlockType type = BlockType.NORMAL;
 
-                if (!specialSpawned && random.nextDouble() > 0.8) {
-                    isSpecial = true;
+                if (!specialSpawned && random.nextDouble() > 0.85) {
+                    if (random.nextDouble() < 0.75) {
+                        type = BlockType.EXTRA_BALL;
+                    } else {
+                        type = BlockType.FIRE_POWER;
+                    }
                     specialSpawned = true;
                 }
 
@@ -609,7 +675,7 @@ public class GameController {
                         GameConfig.PLAYFIELD_MIN_X + (i * GameConfig.BLOCK_SIZE),
                         GameConfig.PLAYFIELD_MIN_Y + GameConfig.BLOCK_SIZE,
                         blockHealth,
-                        isSpecial,
+                        type,
                         root
                 );
 

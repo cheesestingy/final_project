@@ -17,4 +17,7 @@ public class GameConfig {
     public static final double BALL_SPEED = 8.0;
 
     public static final double WARNING_LINE_Y = PLAYFIELD_MAX_Y - BLOCK_SIZE - 20;
+
+    public static final double FIRE_EXPLOSION_RADIUS = BLOCK_SIZE * 1.5;
+    public static final double BURN_PERCENT = 0.10;
 }
