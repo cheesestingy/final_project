@@ -4,5 +4,7 @@ public enum BlockType {
     NORMAL,
     EXTRA_BALL,
     FIRE_POWER,
-    ICE_POWER
+    ICE_POWER,
+    PIERCE_POWER
+    
 }

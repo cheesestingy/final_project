@@ -43,7 +43,10 @@ public class GameController {
     private boolean forceIceRound = false;
     private boolean iceRoundActive = false;
     private int iceRoundsAvailable = 0;
-    private boolean freezeAppliedThisRound = false;
+    private int pierceRoundsAvailable = 0;
+    private boolean pierceRoundActive = false;
+    private boolean forcePierceRound = false;
+
 
     private List<Ball> balls = new ArrayList<>();
     private List<Block> blocks = new ArrayList<>();
@@ -259,6 +262,24 @@ public class GameController {
         }
     }
 
+    private void updateWaitingBallColor() {
+        boolean willBeFire = forceFireRound || fireRoundsAvailable > 0;
+        boolean willBeIce = forceIceRound || iceRoundsAvailable > 0;
+        boolean willBePierce = forcePierceRound || pierceRoundsAvailable > 0;
+
+        for (Ball b : balls) {
+            b.resetType();
+
+            if (willBeFire) {
+                b.setFireBall(true);
+            } else if (willBeIce) {
+                b.setIceBall(true);
+            } else if (willBePierce) {
+                b.setPierceBall(true);
+            }
+        }
+    }
+
     private void handleMousePress(MouseEvent e) {
         if (state == GameState.AIMING) {
             aimPath.setVisible(true);
@@ -283,7 +304,7 @@ public class GameController {
                 fireDelayCounter = 0;
                 firstBallLanded = false;
                 extraBallsEarned = 0;
-                freezeAppliedThisRound = false;
+
 
                 if (fireRoundsAvailable > 0) {
                     fireRoundActive = true;
@@ -299,6 +320,13 @@ public class GameController {
                     iceRoundsAvailable--;
                 } else {
                     iceRoundActive = false;
+                }
+
+                if (pierceRoundsAvailable > 0) {
+                    pierceRoundActive = true;
+                    pierceRoundsAvailable--;
+                } else {
+                    pierceRoundActive = forcePierceRound;
                 }
                 updateRemainingBallsUI();
             }
@@ -389,6 +417,7 @@ public class GameController {
 
                 b.setFireBall(fireRoundActive || forceFireRound);
                 b.setIceBall(iceRoundActive);
+                b.setPierceBall(pierceRoundActive || forcePierceRound);
 
                 ballsFired++;
                 fireDelayCounter = 0;
@@ -494,9 +523,12 @@ public class GameController {
 
             if (isIntersecting(b.circle, block.rect)) {
                 soundManager.playHit();
-                bounceFromBlock(b, block);
-
-                block.health -= ballDamage;
+                if (!b.pierceBall) {
+                    bounceFromBlock(b, block);
+                }
+                if (!b.pierceBall || b.canPierceDamage(block)) {
+                    block.health -= ballDamage;
+                }
                 boolean destroyed = block.health <= 0;
 
                 if (destroyed) {
@@ -516,7 +548,9 @@ public class GameController {
                     iceExplosion(block);
                 }
 
-                break;
+                if (!b.pierceBall) {
+                    break;
+                }
             }
         }
     }
@@ -571,7 +605,7 @@ public class GameController {
             double dy = blockY - centerY;
             double distance = Math.sqrt(dx * dx + dy * dy);
 
-            if (distance <= GameConfig.FIRE_EXPLOSION_RADIUS) {
+            if (distance <= GameConfig.ICE_EXPLOSION_RADIUS) {
                 block.setFrozen(true);
             }
         }
@@ -608,6 +642,9 @@ public class GameController {
             soundManager.playPowerup();
         } else if (block.type == BlockType.ICE_POWER) {
             iceRoundsAvailable++;
+            soundManager.playPowerup();
+        }   else if (block.type == BlockType.PIERCE_POWER) {
+            pierceRoundsAvailable++;
             soundManager.playPowerup();
         }
 
@@ -716,6 +753,7 @@ public class GameController {
             state = GameState.AIMING;
             updateRemainingBallsUI();
             updateShopUI();
+            updateWaitingBallColor();
         }
     }
 
@@ -754,7 +792,11 @@ public class GameController {
         forceFireRound = false;
         forceIceRound = false;
         iceRoundActive = false;
-        freezeAppliedThisRound = false;
+
+        pierceRoundsAvailable = 0;
+        pierceRoundActive = false;
+        forcePierceRound = false;
+
 
         startX = GameConfig.PLAYFIELD_MIN_X + (GameConfig.PLAYFIELD_WIDTH / 2.0);
         nextStartX = startX;
@@ -768,6 +810,8 @@ public class GameController {
 
         gameOverMenu.setVisible(false);
         state = GameState.AIMING;
+
+        soundManager.playBackgroundMusic();
     }
 
     private boolean canSpawnNewRow() {
@@ -799,12 +843,14 @@ public class GameController {
                 if (!specialSpawned && random.nextDouble() > 0.85) {
                     double powerRoll = random.nextDouble();
 
-                    if (powerRoll < 0.65) {
+                    if (powerRoll < 0.55) {
                         type = BlockType.EXTRA_BALL;
-                    } else if (powerRoll < 0.85) {
+                    } else if (powerRoll < 0.75) {
                         type = BlockType.FIRE_POWER;
-                    } else {
+                    } else if (powerRoll < 0.90) {
                         type = BlockType.ICE_POWER;
+                    } else {
+                        type = BlockType.PIERCE_POWER;
                     }
 
                     specialSpawned = true;
@@ -825,10 +871,17 @@ public class GameController {
 
     public void setForceFireRound(boolean forceFireRound) {
         this.forceFireRound = forceFireRound;
+        updateWaitingBallColor();
     }
 
     public void setForceIceRound(boolean forceIceRound) {
         this.forceIceRound = forceIceRound;
+        updateWaitingBallColor();
+    }
+
+    public void setForcePierceRound(boolean forcePierceRound) {
+        this.forcePierceRound = forcePierceRound;
+        updateWaitingBallColor();
     }
 
     public void moveBlocksUpOneRow() {
@@ -886,7 +939,7 @@ public class GameController {
         fireDelayCounter = 0;
         firstBallLanded = false;
         extraBallsEarned = 0;
-        freezeAppliedThisRound = false;
+
 
         endWave();
     }}

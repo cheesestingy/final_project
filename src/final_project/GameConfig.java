@@ -18,6 +18,10 @@ public class GameConfig {
 
     public static final double WARNING_LINE_Y = PLAYFIELD_MAX_Y - BLOCK_SIZE - 20;
 
-    public static final double FIRE_EXPLOSION_RADIUS = BLOCK_SIZE * 2;
-    public static final double BURN_PERCENT = 0.26;
+    public static final double FIRE_EXPLOSION_RADIUS = BLOCK_SIZE * 3;
+    public static final double BURN_PERCENT = 0.42;
+
+    public static final double ICE_EXPLOSION_RADIUS = BLOCK_SIZE * 2.0;
+
+    public static final long PIERCE_DAMAGE_COOLDOWN_MS = 210;
 }

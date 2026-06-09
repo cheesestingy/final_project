@@ -8,6 +8,8 @@ import javafx.scene.effect.DropShadow;
 import javafx.scene.shape.Line;
 import javafx.animation.FadeTransition;
 import javafx.util.Duration;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Ball {
     Circle circle;
@@ -18,10 +20,13 @@ public class Ball {
 
     boolean fireBall = false;
     boolean iceBall = false;
+    boolean pierceBall = false;
 
 
     private Pane root;
     private static final double TRAIL_LIFETIME = 0.35;
+
+    Map<Block, Long> pierceHitCooldown = new HashMap<>();
 
 
 
@@ -78,6 +83,8 @@ public class Ball {
             line.setStroke(Color.ORANGE);
         } else if (iceBall) {
             line.setStroke(Color.LIGHTBLUE);
+        } else if (pierceBall){
+            line.setStroke(Color.BLACK);
         } else {
             line.setStroke(Color.WHITE);
         }
@@ -105,6 +112,31 @@ public class Ball {
         fade.setToValue(0.0);
         fade.setOnFinished(e -> root.getChildren().remove(line));
         fade.play();
+    }
+
+    public void setPierceBall(boolean pierceBall) {
+        this.pierceBall = pierceBall;
+
+        if (pierceBall) {
+            circle.setFill(Color.GRAY);
+            setGlow(Color.BLACK);
+        } else if (!fireBall && !iceBall) {
+            circle.setFill(Color.WHITE);
+            setGlow(Color.WHITE);
+        }
+    }
+
+    public boolean canPierceDamage(Block block) {
+        long now = System.currentTimeMillis();
+
+        Long lastHitTime = pierceHitCooldown.get(block);
+
+        if (lastHitTime == null || now - lastHitTime >= GameConfig.PIERCE_DAMAGE_COOLDOWN_MS) {
+            pierceHitCooldown.put(block, now);
+            return true;
+        }
+
+        return false;
     }
 
 

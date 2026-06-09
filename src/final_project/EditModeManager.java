@@ -13,7 +13,8 @@ public class EditModeManager {
     private final String[] ballTypes = {
             "NORMAL",
             "FIRE",
-            "ICE"
+            "ICE",
+            "PIERCE"
     };
 
     private GameController game;
@@ -81,12 +82,19 @@ public class EditModeManager {
         if (ballTypes[ballTypeIndex].equals("NORMAL")) {
             game.setForceFireRound(false);
             game.setForceIceRound(false);
+            game.setForcePierceRound(false);
         } else if (ballTypes[ballTypeIndex].equals("FIRE")) {
             game.setForceFireRound(true);
             game.setForceIceRound(false);
+            game.setForcePierceRound(false);
         } else if (ballTypes[ballTypeIndex].equals("ICE")) {
             game.setForceFireRound(false);
             game.setForceIceRound(true);
+            game.setForcePierceRound(false);
+        } else if (ballTypes[ballTypeIndex].equals("PIERCE")) {
+            game.setForceFireRound(false);
+            game.setForceIceRound(false);
+            game.setForcePierceRound(true);
         }
     }
 
@@ -107,4 +115,5 @@ public class EditModeManager {
             editText.setVisible(false);
         }
     }
+
 }

@@ -70,6 +70,23 @@ public class Block {
 
             root.getChildren().addAll(rect, ring, text);
 
+        }else if (type == BlockType.PIERCE_POWER) {
+            ring = new Circle(
+                    x + GameConfig.BLOCK_SIZE / 2,
+                    y + GameConfig.BLOCK_SIZE / 2,
+                    GameConfig.BLOCK_SIZE / 2 - 8
+            );
+
+            ring.setFill(Color.TRANSPARENT);
+            ring.setStroke(Color.DARKGRAY);
+            ring.setStrokeWidth(4);
+
+            rect.setFill(Color.GRAY);
+            text.setText("P");
+            text.setFill(Color.BLACK);
+            text.setX(rect.getX() + (rect.getWidth() - text.getLayoutBounds().getWidth()) / 2);
+
+            root.getChildren().addAll(rect, ring, text);
         } else {
             text.setFill(Color.WHITE);
             updateVisuals();
@@ -112,6 +129,13 @@ public class Block {
             rect.setFill(Color.web("#99ddff"));
             rect.setStroke(Color.DEEPSKYBLUE);
             rect.setStrokeWidth(3);
+            return;
+        }
+        if (type == BlockType.PIERCE_POWER) {
+            text.setText("P");
+            text.setFill(Color.BLACK);
+            text.setX(rect.getX() + (rect.getWidth() - text.getLayoutBounds().getWidth()) / 2);
+            rect.setFill(Color.GRAY);
             return;
         }
 
