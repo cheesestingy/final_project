@@ -1,7 +1,7 @@
 package final_project;
 
 public class GameConfig {
-    public static final int WINDOW_WIDTH = 750;
+    public static final int WINDOW_WIDTH = 850;
     public static final int WINDOW_HEIGHT = 800;
 
     public static final int PLAYFIELD_WIDTH = 450;
@@ -27,12 +27,24 @@ public class GameConfig {
 
     public static final double SHRINK_BALL_SIZE = 0.3;
 
+    public static final int BALL_DAMAGE_START = 1;
+    public static final double BALL_DAMAGE_UPGRADE_MULTIPLIER = 1.05;
+    public static final int BALL_DAMAGE_MAX = 6767676767676767;
+
+    public static final int BALL_DAMAGE_UPGRADE_COST_START = 50;
+    public static final int BALL_DAMAGE_UPGRADE_COST_INCREASE = 50;
+
     public static final double POWER_UP_SPAWN_CHANCE_START = 0.2;
-    public static final double POWER_UP_SPAWN_CHANCE_UPGRADE_AMOUNT = 0.06;
-    public static final double POWER_UP_SPAWN_CHANCE_MAX = 0.70;
+    public static final double POWER_UP_SPAWN_CHANCE_UPGRADE_AMOUNT = 0.04;
+    public static final double POWER_UP_SPAWN_CHANCE_MAX = 0.60;
 
     public static final int POWER_UP_UPGRADE_COST_START = 80;
     public static final int POWER_UP_UPGRADE_COST_INCREASE = 60;
 
-    public static final double COIN_REWARD_MULTIPLIER = 2.0;
+    public static final double COIN_REWARD_MULTIPLIER_START = 2.0;
+    public static final double COIN_REWARD_MULTIPLIER_UPGRADE_AMOUNT = 0.2;
+    public static final double COIN_REWARD_MULTIPLIER_MAX = 4.0;
+
+    public static final int COIN_REWARD_UPGRADE_COST_START = 100;
+    public static final int COIN_REWARD_UPGRADE_COST_INCREASE = 75;
 }

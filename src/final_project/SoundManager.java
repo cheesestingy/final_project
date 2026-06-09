@@ -11,6 +11,7 @@ public class SoundManager {
     private final AudioClip powerupSound;
     private final AudioClip shootSound;
     private final AudioClip gameOverSound;
+    private final AudioClip buySound;
     private MediaPlayer backgroundPlayer;
 
     public SoundManager() {
@@ -18,6 +19,7 @@ public class SoundManager {
         destroySound = loadSound("sound/destory.wav");
         powerupSound = loadSound("sound/powerup.wav");
         shootSound = loadSound("sound/shoot.wav");
+        buySound = loadSound("sound/buy.wav");
         gameOverSound = loadSound("sound/gameover.wav");
         setupBackgroundMusic();
     }
@@ -44,6 +46,9 @@ public class SoundManager {
 
     public void playGameOver() {
         gameOverSound.play();
+    }
+    public void playBuy() {
+        buySound.play();
     }
     private void setupBackgroundMusic() {
         Media media = new Media(

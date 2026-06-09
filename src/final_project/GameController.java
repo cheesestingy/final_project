@@ -22,6 +22,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
+import javafx.animation.Timeline;
+import javafx.animation.KeyFrame;
+import javafx.util.Duration;
+
 public class GameController {
 
     private Pane root;
@@ -60,11 +64,16 @@ public class GameController {
     private int highestWave = 1;
     private int totalBalls = 1;
     private int money = 0;
-    private int ballDamage = 1;
-    private int damageUpgradeCost = 50;
+    private int ballDamage = GameConfig.BALL_DAMAGE_START;
+    private int damageUpgradeCost = GameConfig.BALL_DAMAGE_UPGRADE_COST_START;
     private double powerUpSpawnChance = GameConfig.POWER_UP_SPAWN_CHANCE_START;
     private int powerUpUpgradeCost = GameConfig.POWER_UP_UPGRADE_COST_START;
     private Button upgradePowerUpBtn;
+    private double coinRewardMultiplier = GameConfig.COIN_REWARD_MULTIPLIER_START;
+    private int coinRewardUpgradeCost = GameConfig.COIN_REWARD_UPGRADE_COST_START;
+    private Button upgradeCoinRewardBtn;
+
+
 
 
 
@@ -166,6 +175,23 @@ public class GameController {
         editModeManager = new EditModeManager(this, editModeText);
         editModeManager.attach(scene);
     }
+
+    private void enableHoldUpgrade(Button button, Runnable action) {
+        Timeline holdTimer = new Timeline(
+                new KeyFrame(Duration.millis(120), e -> action.run())
+        );
+
+        holdTimer.setCycleCount(Timeline.INDEFINITE);
+
+        button.setOnMousePressed(e -> {
+            action.run();
+            holdTimer.playFromStart();
+        });
+
+        button.setOnMouseReleased(e -> holdTimer.stop());
+        button.setOnMouseExited(e -> holdTimer.stop());
+    }
+
     private void setupUI() {
         waveText = new Text("Wave: " + wave);
         waveText.setFont(Font.font("Arial", FontWeight.BOLD, 24));
@@ -198,13 +224,18 @@ public class GameController {
         upgradeDamageBtn = new Button();
         upgradeDamageBtn.setLayoutX(GameConfig.PLAYFIELD_MAX_X + 20);
         upgradeDamageBtn.setLayoutY(150);
-        upgradeDamageBtn.setStyle("-fx-background-color: #2ecc71; -fx-text-fill: white; -fx-font-weight: bold;");
-        upgradeDamageBtn.setOnAction(e -> handleUpgradePurchase());
+        upgradeDamageBtn.setStyle("-fx-background-color: #2ecc71; -fx-text-fill: black; -fx-font-weight: bold;");
+        enableHoldUpgrade(upgradeDamageBtn, this::handleUpgradePurchase);
         upgradePowerUpBtn = new Button();
         upgradePowerUpBtn.setLayoutX(GameConfig.PLAYFIELD_MAX_X + 20);
         upgradePowerUpBtn.setLayoutY(250);
         upgradePowerUpBtn.setStyle("-fx-background-color: #9b59b6; -fx-text-fill: white; -fx-font-weight: bold;");
-        upgradePowerUpBtn.setOnAction(e -> handlePowerUpUpgradePurchase());
+        enableHoldUpgrade(upgradePowerUpBtn, this::handlePowerUpUpgradePurchase);
+        upgradeCoinRewardBtn = new Button();
+        upgradeCoinRewardBtn.setLayoutX(GameConfig.PLAYFIELD_MAX_X + 20);
+        upgradeCoinRewardBtn.setLayoutY(350);
+        upgradeCoinRewardBtn.setStyle("-fx-background-color: #f1c40f; -fx-text-fill: black; -fx-font-weight: bold;");
+        enableHoldUpgrade(upgradeCoinRewardBtn, this::handleCoinRewardUpgradePurchase);
 
         remainingBallsText = new Text("x" + totalBalls);
         remainingBallsText.setFont(Font.font("Arial", FontWeight.BOLD, 14));
@@ -217,6 +248,7 @@ public class GameController {
                 shopTitle,
                 upgradeDamageBtn,
                 upgradePowerUpBtn,
+                upgradeCoinRewardBtn,
                 remainingBallsText
         );
     }
@@ -250,10 +282,19 @@ public class GameController {
     private void handleUpgradePurchase() {
         if (state == GameState.GAME_OVER) return;
 
-        if (money >= damageUpgradeCost) {
+        if (money >= damageUpgradeCost &&
+                ballDamage < GameConfig.BALL_DAMAGE_MAX) {
+            soundManager.playBuy();
             money -= damageUpgradeCost;
-            ballDamage++;
-            damageUpgradeCost += 50;
+            ballDamage = (int) Math.ceil(
+                    ballDamage * GameConfig.BALL_DAMAGE_UPGRADE_MULTIPLIER
+            );
+
+            if (ballDamage > GameConfig.BALL_DAMAGE_MAX) {
+                ballDamage = GameConfig.BALL_DAMAGE_MAX;
+            }
+
+            damageUpgradeCost += GameConfig.BALL_DAMAGE_UPGRADE_COST_INCREASE;
             updateShopUI();
         }
     }
@@ -263,7 +304,7 @@ public class GameController {
 
         if (money >= powerUpUpgradeCost &&
                 powerUpSpawnChance < GameConfig.POWER_UP_SPAWN_CHANCE_MAX) {
-
+            soundManager.playBuy();
             money -= powerUpUpgradeCost;
             powerUpSpawnChance += GameConfig.POWER_UP_SPAWN_CHANCE_UPGRADE_AMOUNT;
 
@@ -275,18 +316,47 @@ public class GameController {
             updateShopUI();
         }
     }
+    private void handleCoinRewardUpgradePurchase() {
+        if (state == GameState.GAME_OVER) return;
+
+        if (money >= coinRewardUpgradeCost &&
+                coinRewardMultiplier < GameConfig.COIN_REWARD_MULTIPLIER_MAX) {
+            soundManager.playBuy();
+            money -= coinRewardUpgradeCost;
+            coinRewardMultiplier += GameConfig.COIN_REWARD_MULTIPLIER_UPGRADE_AMOUNT;
+
+            if (coinRewardMultiplier > GameConfig.COIN_REWARD_MULTIPLIER_MAX) {
+                coinRewardMultiplier = GameConfig.COIN_REWARD_MULTIPLIER_MAX;
+            }
+
+            coinRewardUpgradeCost += GameConfig.COIN_REWARD_UPGRADE_COST_INCREASE;
+            updateShopUI();
+        }
+    }
 
     private void updateShopUI() {
         moneyText.setText("Money: $" + money);
 
+        // 攻擊升級
         upgradeDamageBtn.setText(
                 "Ball Damage +\n" +
                         "Cost: $" + damageUpgradeCost + "\n" +
                         "Current: " + ballDamage
         );
 
-        upgradeDamageBtn.setDisable(money < damageUpgradeCost);
+        boolean damageMaxed = ballDamage >= GameConfig.BALL_DAMAGE_MAX;
 
+        upgradeDamageBtn.setDisable(money < damageUpgradeCost || damageMaxed);
+
+        if (damageMaxed) {
+            upgradeDamageBtn.setText(
+                    "Ball Damage\n" +
+                            "MAX\n" +
+                            "Current: " + ballDamage
+            );
+        }
+
+        // Power up 出現率升級
         int percent = (int) Math.round(powerUpSpawnChance * 100);
 
         upgradePowerUpBtn.setText(
@@ -295,19 +365,37 @@ public class GameController {
                         "Current: " + percent + "%"
         );
 
-        boolean maxed = powerUpSpawnChance >= GameConfig.POWER_UP_SPAWN_CHANCE_MAX;
+        boolean powerUpMaxed = powerUpSpawnChance >= GameConfig.POWER_UP_SPAWN_CHANCE_MAX;
 
-        upgradePowerUpBtn.setDisable(money < powerUpUpgradeCost || maxed);
+        upgradePowerUpBtn.setDisable(money < powerUpUpgradeCost || powerUpMaxed);
 
-        if (maxed) {
+        if (powerUpMaxed) {
             upgradePowerUpBtn.setText(
                     "Power Up Rate\n" +
                             "MAX\n" +
                             "Current: " + percent + "%"
             );
         }
-    }
 
+        // 金幣倍率升級
+        upgradeCoinRewardBtn.setText(
+                "Coin Bonus +\n" +
+                        "Cost: $" + coinRewardUpgradeCost + "\n" +
+                        "Current: x" + String.format("%.1f", coinRewardMultiplier)
+        );
+
+        boolean coinMaxed = coinRewardMultiplier >= GameConfig.COIN_REWARD_MULTIPLIER_MAX;
+
+        upgradeCoinRewardBtn.setDisable(money < coinRewardUpgradeCost || coinMaxed);
+
+        if (coinMaxed) {
+            upgradeCoinRewardBtn.setText(
+                    "Coin Bonus\n" +
+                            "MAX\n" +
+                            "Current: x" + String.format("%.1f", coinRewardMultiplier)
+            );
+        }
+    }
     private void updateRemainingBallsUI() {
         if (state == GameState.WAITING || state == GameState.GAME_OVER) {
             remainingBallsText.setVisible(false);
@@ -706,7 +794,7 @@ public class GameController {
     }
 
     private void handleBlockDestroyed(Block block) {
-        money += (int) Math.round(block.maxHealth * GameConfig.COIN_REWARD_MULTIPLIER);
+        money += (int) Math.round(block.maxHealth * coinRewardMultiplier);
 
         if (block.type == BlockType.EXTRA_BALL) {
             extraBallsEarned++;
@@ -857,8 +945,10 @@ public class GameController {
         ballsFired = 0;
         extraBallsEarned = 0;
         money = 0;
-        ballDamage = 1;
-        damageUpgradeCost = 50;
+        coinRewardMultiplier = GameConfig.COIN_REWARD_MULTIPLIER_START;
+        coinRewardUpgradeCost = GameConfig.COIN_REWARD_UPGRADE_COST_START;
+        ballDamage = GameConfig.BALL_DAMAGE_START;
+        damageUpgradeCost = GameConfig.BALL_DAMAGE_UPGRADE_COST_START;
         firstBallLanded = false;
         powerUpSpawnChance = GameConfig.POWER_UP_SPAWN_CHANCE_START;
         powerUpUpgradeCost = GameConfig.POWER_UP_UPGRADE_COST_START;
