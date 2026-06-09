@@ -371,12 +371,10 @@ public class GameController {
         }
 
         b.circle.setCenterX(b.circle.getCenterX() + b.vx);
-        checkWallCollisions(b);
-        checkBlockCollisions(b, true);
-
         b.circle.setCenterY(b.circle.getCenterY() + b.vy);
+
         checkWallCollisions(b);
-        checkBlockCollisions(b, false);
+        checkBlockCollisions(b);
 
         if (b.circle.getCenterY() + GameConfig.BALL_RADIUS >= GameConfig.PLAYFIELD_MAX_Y) {
             b.circle.setCenterY(startY);
@@ -422,20 +420,42 @@ public class GameController {
             if (b.vy < 0) b.vy = -b.vy;
         }
     }
-
-    private void checkBlockCollisions(Ball b, boolean movingX) {
+    private void checkBlockCollisions(Ball b) {
         Iterator<Block> it = blocks.iterator();
 
         while (it.hasNext()) {
             Block block = it.next();
 
             if (isIntersecting(b.circle, block.rect)) {
-                if (movingX) {
+
+                double ballX = b.circle.getCenterX();
+                double ballY = b.circle.getCenterY();
+
+                double blockCenterX = block.rect.getX() + block.rect.getWidth() / 2.0;
+                double blockCenterY = block.rect.getY() + block.rect.getHeight() / 2.0;
+
+                double dx = ballX - blockCenterX;
+                double dy = ballY - blockCenterY;
+
+                double overlapX = block.rect.getWidth() / 2.0 + b.circle.getRadius() - Math.abs(dx);
+                double overlapY = block.rect.getHeight() / 2.0 + b.circle.getRadius() - Math.abs(dy);
+
+                if (overlapX < overlapY) {
                     b.vx = -b.vx;
-                    b.circle.setCenterX(b.circle.getCenterX() + (b.vx > 0 ? 1 : -1));
+
+                    if (dx > 0) {
+                        b.circle.setCenterX(block.rect.getX() + block.rect.getWidth() + b.circle.getRadius());
+                    } else {
+                        b.circle.setCenterX(block.rect.getX() - b.circle.getRadius());
+                    }
                 } else {
                     b.vy = -b.vy;
-                    b.circle.setCenterY(b.circle.getCenterY() + (b.vy > 0 ? 1 : -1));
+
+                    if (dy > 0) {
+                        b.circle.setCenterY(block.rect.getY() + block.rect.getHeight() + b.circle.getRadius());
+                    } else {
+                        b.circle.setCenterY(block.rect.getY() - b.circle.getRadius());
+                    }
                 }
 
                 block.health -= ballDamage;
@@ -458,7 +478,6 @@ public class GameController {
             }
         }
     }
-
     private boolean isIntersecting(Circle c, Rectangle r) {
         double circleDistanceX = Math.abs(c.getCenterX() - r.getX() - r.getWidth() / 2);
         double circleDistanceY = Math.abs(c.getCenterY() - r.getY() - r.getHeight() / 2);
