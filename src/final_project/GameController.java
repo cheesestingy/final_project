@@ -35,6 +35,11 @@ public class GameController {
     private VBox gameOverMenu;
     private Text gameOverWaveText;
 
+    private Text editModeText;
+    private EditModeManager editModeManager;
+    private boolean forceFireRound = false;
+    private boolean forceIceRound = false;
+
     private List<Ball> balls = new ArrayList<>();
     private List<Block> blocks = new ArrayList<>();
 
@@ -47,6 +52,9 @@ public class GameController {
 
     private int fireRoundsAvailable = 0;
     private boolean fireRoundActive = false;
+
+    private int freezeTurnsAvailable = 0;
+    private boolean freezeThisWave = false;
 
     private double startX = GameConfig.PLAYFIELD_MIN_X + (GameConfig.PLAYFIELD_WIDTH / 2.0);
     private final double startY = GameConfig.PLAYFIELD_MAX_Y - GameConfig.BALL_RADIUS;
@@ -104,6 +112,8 @@ public class GameController {
         root.setOnMouseReleased(this::handleMouseRelease);
 
         Scene scene = new Scene(root, GameConfig.WINDOW_WIDTH, GameConfig.WINDOW_HEIGHT);
+        setupEditMode(scene);
+
         primaryStage.setTitle("Block Breaker Final Project");
         primaryStage.setScene(scene);
         primaryStage.show();
@@ -119,6 +129,20 @@ public class GameController {
             }
         };
         timer.start();
+    }
+
+    private void setupEditMode(Scene scene) {
+        editModeText = new Text();
+        editModeText.setX(20);
+        editModeText.setY(180);
+        editModeText.setFill(Color.LIGHTGREEN);
+        editModeText.setFont(Font.font("Arial", FontWeight.BOLD, 16));
+        editModeText.setVisible(false);
+
+        root.getChildren().add(editModeText);
+
+        editModeManager = new EditModeManager(this, editModeText);
+        editModeManager.attach(scene);
     }
 
     private void setupUI() {
@@ -324,13 +348,6 @@ public class GameController {
                     break;
                 }
             }
-
-            double lastY = aimPath.getPoints().get(aimPath.getPoints().size() - 1);
-            double lastX = aimPath.getPoints().get(aimPath.getPoints().size() - 2);
-
-            if (lastX != simX || lastY != simY) {
-                aimPath.getPoints().addAll(simX, simY);
-            }
         }
     }
 
@@ -344,7 +361,9 @@ public class GameController {
                 b.vx = aimVx;
                 b.vy = aimVy;
                 b.active = true;
-                b.setFireBall(fireRoundActive);
+
+                b.setFireBall(fireRoundActive || forceFireRound);
+                b.setIceBall(forceIceRound);
 
                 ballsFired++;
                 fireDelayCounter = 0;
@@ -460,6 +479,9 @@ public class GameController {
                 if (b.fireBall) {
                     fireExplosion(block);
                 }
+                if (b.iceBall) {
+                    freezeTurnsAvailable++;
+                }
 
                 break;
             }
@@ -481,20 +503,8 @@ public class GameController {
 
         if (overlapX < overlapY) {
             b.vx = -b.vx;
-
-            if (dx > 0) {
-                b.circle.setCenterX(block.rect.getX() + block.rect.getWidth() + b.circle.getRadius());
-            } else {
-                b.circle.setCenterX(block.rect.getX() - b.circle.getRadius());
-            }
         } else {
             b.vy = -b.vy;
-
-            if (dy > 0) {
-                b.circle.setCenterY(block.rect.getY() + block.rect.getHeight() + b.circle.getRadius());
-            } else {
-                b.circle.setCenterY(block.rect.getY() - b.circle.getRadius());
-            }
         }
     }
 
@@ -544,6 +554,8 @@ public class GameController {
             extraBallsEarned++;
         } else if (block.type == BlockType.FIRE_POWER) {
             fireRoundsAvailable++;
+        } else if (block.type == BlockType.ICE_POWER) {
+            freezeTurnsAvailable++;
         }
 
         updateShopUI();
@@ -573,6 +585,13 @@ public class GameController {
         wave++;
         fireRoundActive = false;
 
+        if (freezeTurnsAvailable > 0) {
+            freezeThisWave = true;
+            freezeTurnsAvailable--;
+        } else {
+            freezeThisWave = false;
+        }
+
         if (wave > highestWave) {
             highestWave = wave;
             highScoreText.setText("Highest: " + highestWave);
@@ -589,7 +608,9 @@ public class GameController {
         boolean isGameOver = false;
 
         for (Block block : blocks) {
-            block.shiftDown();
+            if (!freezeThisWave) {
+                block.shiftDown();
+            }
 
             if (block.rect.getY() + GameConfig.BLOCK_SIZE >= GameConfig.WARNING_LINE_Y) {
                 isGameOver = true;
@@ -599,7 +620,10 @@ public class GameController {
         if (isGameOver) {
             triggerGameOver();
         } else {
-            spawnRow();
+            if (!freezeThisWave) {
+                spawnRow();
+            }
+
             state = GameState.AIMING;
             updateRemainingBallsUI();
             updateShopUI();
@@ -631,6 +655,13 @@ public class GameController {
         firstBallLanded = false;
         fireRoundsAvailable = 0;
         fireRoundActive = false;
+        freezeTurnsAvailable = 0;
+        freezeThisWave = false;
+        forceFireRound = false;
+        forceIceRound = false;
+
+        freezeTurnsAvailable = 0;
+        freezeThisWave = false;
 
         startX = GameConfig.PLAYFIELD_MIN_X + (GameConfig.PLAYFIELD_WIDTH / 2.0);
         nextStartX = startX;
@@ -663,11 +694,16 @@ public class GameController {
                 BlockType type = BlockType.NORMAL;
 
                 if (!specialSpawned && random.nextDouble() > 0.85) {
-                    if (random.nextDouble() < 0.75) {
+                    double powerRoll = random.nextDouble();
+
+                    if (powerRoll < 0.65) {
                         type = BlockType.EXTRA_BALL;
-                    } else {
+                    } else if (powerRoll < 0.85) {
                         type = BlockType.FIRE_POWER;
+                    } else {
+                        type = BlockType.ICE_POWER;
                     }
+
                     specialSpawned = true;
                 }
 
@@ -682,5 +718,56 @@ public class GameController {
                 blocks.add(block);
             }
         }
+    }
+
+    public void setForceFireRound(boolean forceFireRound) {
+        this.forceFireRound = forceFireRound;
+    }
+
+    public void setForceIceRound(boolean forceIceRound) {
+        this.forceIceRound = forceIceRound;
+    }
+
+    public void moveBlocksUpOneRow() {
+        if (state == GameState.SHOOTING || state == GameState.WAITING) return;
+
+        Iterator<Block> it = blocks.iterator();
+
+        while (it.hasNext()) {
+            Block block = it.next();
+
+            block.rect.setY(block.rect.getY() - GameConfig.BLOCK_SIZE);
+            block.text.setY(block.text.getY() - GameConfig.BLOCK_SIZE);
+
+            if (block.ring != null) {
+                block.ring.setCenterY(block.ring.getCenterY() - GameConfig.BLOCK_SIZE);
+            }
+
+            if (block.rect.getY() <= GameConfig.PLAYFIELD_MIN_Y + GameConfig.BLOCK_SIZE + 1) {
+                block.remove();
+                it.remove();
+            }
+        }
+
+        if (wave > 1) {
+            wave--;
+            waveText.setText("Wave: " + wave);
+        }
+
+        int targetBallCount = Math.max(1, totalBalls - 1);
+        totalBalls = targetBallCount;
+
+        while (balls.size() > totalBalls) {
+            Ball removed = balls.remove(balls.size() - 1);
+            root.getChildren().remove(removed.circle);
+        }
+
+        updateRemainingBallsUI();
+        updateShopUI();
+    }
+    public void forceNextWave() {
+        if (state != GameState.AIMING) return;
+
+        endWave();
     }
 }

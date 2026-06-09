@@ -33,6 +33,7 @@ public class Block {
             ring.setFill(Color.TRANSPARENT);
             ring.setStroke(Color.BLACK);
             ring.setStrokeWidth(3);
+
             text.setFill(Color.BLACK);
             updateVisuals();
             root.getChildren().addAll(rect, ring, text);
@@ -46,6 +47,19 @@ public class Block {
             rect.setFill(Color.web("#ffcc66"));
             text.setText("F");
             text.setFill(Color.ORANGERED);
+            text.setX(rect.getX() + (rect.getWidth() - text.getLayoutBounds().getWidth()) / 2);
+
+            root.getChildren().addAll(rect, ring, text);
+
+        } else if (type == BlockType.ICE_POWER) {
+            ring = new Circle(x + GameConfig.BLOCK_SIZE / 2, y + GameConfig.BLOCK_SIZE / 2, GameConfig.BLOCK_SIZE / 2 - 8);
+            ring.setFill(Color.TRANSPARENT);
+            ring.setStroke(Color.LIGHTBLUE);
+            ring.setStrokeWidth(4);
+
+            rect.setFill(Color.web("#99ddff"));
+            text.setText("I");
+            text.setFill(Color.BLUE);
             text.setX(rect.getX() + (rect.getWidth() - text.getLayoutBounds().getWidth()) / 2);
 
             root.getChildren().addAll(rect, ring, text);
@@ -69,6 +83,13 @@ public class Block {
             text.setText("F");
             text.setX(rect.getX() + (rect.getWidth() - text.getLayoutBounds().getWidth()) / 2);
             rect.setFill(Color.web("#ffcc66"));
+            return;
+        }
+
+        if (type == BlockType.ICE_POWER) {
+            text.setText("I");
+            text.setX(rect.getX() + (rect.getWidth() - text.getLayoutBounds().getWidth()) / 2);
+            rect.setFill(Color.web("#99ddff"));
             return;
         }
 

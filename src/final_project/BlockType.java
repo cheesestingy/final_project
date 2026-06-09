@@ -3,5 +3,6 @@ package final_project;
 public enum BlockType {
     NORMAL,
     EXTRA_BALL,
-    FIRE_POWER
+    FIRE_POWER,
+    ICE_POWER
 }
