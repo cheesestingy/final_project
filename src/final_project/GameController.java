@@ -31,6 +31,7 @@ public class GameController {
     private Text moneyText;
     private Text remainingBallsText;
     private Button upgradeDamageBtn;
+    private SoundManager soundManager;
 
     private VBox gameOverMenu;
     private Text gameOverWaveText;
@@ -74,6 +75,8 @@ public class GameController {
 
     public void start(Stage primaryStage) {
         root = new Pane();
+        soundManager = new SoundManager();
+        soundManager.playBackgroundMusic();
         root.setStyle("-fx-background-color: #0f0f1a;");
 
         Rectangle playfield = new Rectangle(
@@ -113,6 +116,9 @@ public class GameController {
         root.setOnMouseReleased(this::handleMouseRelease);
 
         Scene scene = new Scene(root, GameConfig.WINDOW_WIDTH, GameConfig.WINDOW_HEIGHT);
+        scene.getStylesheets().add(
+                getClass().getResource("style.css").toExternalForm()
+        );
         setupEditMode(scene);
 
         primaryStage.setTitle("Block Breaker Final Project");
@@ -135,6 +141,7 @@ public class GameController {
 
     private void setupEditMode(Scene scene) {
         editModeText = new Text();
+        editModeText.getStyleClass().add("edit-text");
         editModeText.setX(20);
         editModeText.setY(180);
         editModeText.setFill(Color.LIGHTGREEN);
@@ -167,6 +174,10 @@ public class GameController {
         moneyText.setFill(Color.GOLD);
         moneyText.setX(GameConfig.PLAYFIELD_MAX_X + 20);
         moneyText.setY(80);
+
+        waveText.getStyleClass().add("game-text");
+        highScoreText.getStyleClass().add("game-text");
+        moneyText.getStyleClass().add("money-text");
 
         Text shopTitle = new Text("SHOP");
         shopTitle.setFont(Font.font("Arial", FontWeight.BOLD, 18));
@@ -266,6 +277,7 @@ public class GameController {
             aimPath.setVisible(false);
 
             if (aimVy < -1.0) {
+                soundManager.playShoot();
                 state = GameState.SHOOTING;
                 ballsFired = 0;
                 fireDelayCounter = 0;
@@ -418,8 +430,13 @@ public class GameController {
             return;
         }
 
+        double oldX = b.circle.getCenterX();
+        double oldY = b.circle.getCenterY();
+
         b.circle.setCenterX(b.circle.getCenterX() + b.vx);
         b.circle.setCenterY(b.circle.getCenterY() + b.vy);
+
+        b.addTrail(oldX, oldY);
 
         checkWallCollisions(b);
         checkBlockCollisions(b);
@@ -476,12 +493,14 @@ public class GameController {
             Block block = it.next();
 
             if (isIntersecting(b.circle, block.rect)) {
+                soundManager.playHit();
                 bounceFromBlock(b, block);
 
                 block.health -= ballDamage;
                 boolean destroyed = block.health <= 0;
 
                 if (destroyed) {
+                    soundManager.playDestroy();
                     handleBlockDestroyed(block);
                     block.remove();
                     it.remove();
@@ -583,11 +602,15 @@ public class GameController {
 
         if (block.type == BlockType.EXTRA_BALL) {
             extraBallsEarned++;
+            soundManager.playPowerup();
         } else if (block.type == BlockType.FIRE_POWER) {
             fireRoundsAvailable++;
+            soundManager.playPowerup();
         } else if (block.type == BlockType.ICE_POWER) {
             iceRoundsAvailable++;
+            soundManager.playPowerup();
         }
+
         updateShopUI();
     }
 
@@ -697,6 +720,8 @@ public class GameController {
     }
 
     private void triggerGameOver() {
+        soundManager.stopBackgroundMusic();
+        soundManager.playGameOver();
         state = GameState.GAME_OVER;
         gameOverWaveText.setText("You reached Wave: " + wave);
         gameOverMenu.toFront();
@@ -708,7 +733,9 @@ public class GameController {
         for (Block b : blocks) b.remove();
         blocks.clear();
 
-        for (Ball b : balls) root.getChildren().remove(b.circle);
+        for (Ball b : balls) {
+            root.getChildren().remove(b.circle);
+        }
         balls.clear();
 
         wave = 1;

@@ -7,6 +7,8 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
+import javafx.scene.effect.DropShadow;
+
 
 public class Block {
     Rectangle rect;
@@ -25,6 +27,9 @@ public class Block {
         this.type = type;
 
         rect = new Rectangle(x + 2, y + 2, GameConfig.BLOCK_SIZE - 4, GameConfig.BLOCK_SIZE - 4);
+        rect.setArcWidth(16);
+        rect.setArcHeight(16);
+        rect.setEffect(new DropShadow(8, Color.BLACK));
 
         text = new Text();
         text.setFont(Font.font("Arial", FontWeight.BOLD, 22));
@@ -74,6 +79,14 @@ public class Block {
         text.setY(y + (GameConfig.BLOCK_SIZE + text.getLayoutBounds().getHeight() / 2) / 2 - 2);
     }
 
+    private void setGlow(Color color) {
+        DropShadow glow = new DropShadow();
+        glow.setColor(color);
+        glow.setRadius(15);
+        glow.setSpread(0.5);
+        rect.setEffect(glow);
+    }
+
     public void setBurning(boolean burning) {
         this.burning = burning;
         updateVisuals();
@@ -87,15 +100,18 @@ public class Block {
     public void updateVisuals() {
         if (type == BlockType.FIRE_POWER) {
             text.setText("F");
-            text.setX(rect.getX() + (rect.getWidth() - text.getLayoutBounds().getWidth()) / 2);
+            text.setFill(Color.ORANGERED);
             rect.setFill(Color.web("#ffcc66"));
+            rect.setStroke(Color.ORANGERED);
+            rect.setStrokeWidth(3);
             return;
         }
-
         if (type == BlockType.ICE_POWER) {
             text.setText("I");
-            text.setX(rect.getX() + (rect.getWidth() - text.getLayoutBounds().getWidth()) / 2);
+            text.setFill(Color.DEEPSKYBLUE);
             rect.setFill(Color.web("#99ddff"));
+            rect.setStroke(Color.DEEPSKYBLUE);
+            rect.setStrokeWidth(3);
             return;
         }
 
@@ -104,13 +120,23 @@ public class Block {
 
         if (frozen) {
             rect.setFill(Color.LIGHTBLUE);
+            setGlow(Color.LIGHTBLUE);
         } else if (burning) {
-            rect.setFill(Color.ORANGERED);
+            rect.setFill(Color.ORANGE);
+            setGlow(Color.ORANGE);
         } else {
             double hue = (health * 12) % 360;
             rect.setFill(Color.hsb(hue, 0.75, 0.9));
+            rect.setStroke(Color.LIGHTGRAY);
+            rect.setStrokeWidth(1.5);
+            rect.setFill(Color.hsb(hue, 0.75, 0.9));
+            setGlow(Color.color(0, 0, 0, 0.4));
         }
+
+
     }
+
+
 
     public void shiftDown() {
         rect.setY(rect.getY() + GameConfig.BLOCK_SIZE);
