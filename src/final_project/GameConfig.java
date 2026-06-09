@@ -24,4 +24,6 @@ public class GameConfig {
     public static final double ICE_EXPLOSION_RADIUS = BLOCK_SIZE * 2.0;
 
     public static final long PIERCE_DAMAGE_COOLDOWN_MS = 210;
+
+    public static final double SHRINK_BALL_SIZE = 0.3;
 }

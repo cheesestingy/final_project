@@ -39,6 +39,8 @@ public class GameController {
     private Text editModeText;
     private EditModeManager editModeManager;
 
+    private int fireRoundsAvailable = 0;
+    private boolean fireRoundActive = false;
     private boolean forceFireRound = false;
     private boolean forceIceRound = false;
     private boolean iceRoundActive = false;
@@ -46,6 +48,9 @@ public class GameController {
     private int pierceRoundsAvailable = 0;
     private boolean pierceRoundActive = false;
     private boolean forcePierceRound = false;
+    private int shrinkRoundsAvailable = 0;
+    private boolean shrinkRoundActive = false;
+    private boolean forceShrinkRound = false;
 
 
     private List<Ball> balls = new ArrayList<>();
@@ -58,8 +63,7 @@ public class GameController {
     private int ballDamage = 1;
     private int damageUpgradeCost = 50;
 
-    private int fireRoundsAvailable = 0;
-    private boolean fireRoundActive = false;
+
 
     private double startX = GameConfig.PLAYFIELD_MIN_X + (GameConfig.PLAYFIELD_WIDTH / 2.0);
     private final double startY = GameConfig.PLAYFIELD_MAX_Y - GameConfig.BALL_RADIUS;
@@ -266,6 +270,7 @@ public class GameController {
         boolean willBeFire = forceFireRound || fireRoundsAvailable > 0;
         boolean willBeIce = forceIceRound || iceRoundsAvailable > 0;
         boolean willBePierce = forcePierceRound || pierceRoundsAvailable > 0;
+        boolean willBeShrink = forceShrinkRound || shrinkRoundsAvailable > 0;
 
         for (Ball b : balls) {
             b.resetType();
@@ -276,6 +281,8 @@ public class GameController {
                 b.setIceBall(true);
             } else if (willBePierce) {
                 b.setPierceBall(true);
+            } else if (willBeShrink) {
+                b.setShrinkBall(true);
             }
         }
     }
@@ -327,6 +334,13 @@ public class GameController {
                     pierceRoundsAvailable--;
                 } else {
                     pierceRoundActive = forcePierceRound;
+                }
+
+                if (shrinkRoundsAvailable > 0) {
+                    shrinkRoundActive = true;
+                    shrinkRoundsAvailable--;
+                } else {
+                    shrinkRoundActive = forceShrinkRound;
                 }
                 updateRemainingBallsUI();
             }
@@ -418,6 +432,7 @@ public class GameController {
                 b.setFireBall(fireRoundActive || forceFireRound);
                 b.setIceBall(iceRoundActive);
                 b.setPierceBall(pierceRoundActive || forcePierceRound);
+                b.setShrinkBall(shrinkRoundActive || forceShrinkRound);
 
                 ballsFired++;
                 fireDelayCounter = 0;
@@ -643,9 +658,11 @@ public class GameController {
         } else if (block.type == BlockType.ICE_POWER) {
             iceRoundsAvailable++;
             soundManager.playPowerup();
-        }   else if (block.type == BlockType.PIERCE_POWER) {
+        } else if (block.type == BlockType.PIERCE_POWER) {
             pierceRoundsAvailable++;
             soundManager.playPowerup();
+        }  else if (block.type == BlockType.SHRINK_POWER) {
+            shrinkRoundsAvailable++;
         }
 
         updateShopUI();
@@ -790,12 +807,17 @@ public class GameController {
         iceRoundsAvailable = 0;
 
         forceFireRound = false;
+
         forceIceRound = false;
         iceRoundActive = false;
 
         pierceRoundsAvailable = 0;
         pierceRoundActive = false;
         forcePierceRound = false;
+
+        shrinkRoundsAvailable = 0;
+        shrinkRoundActive = false;
+        forceShrinkRound = false;
 
 
         startX = GameConfig.PLAYFIELD_MIN_X + (GameConfig.PLAYFIELD_WIDTH / 2.0);
@@ -843,14 +865,16 @@ public class GameController {
                 if (!specialSpawned && random.nextDouble() > 0.85) {
                     double powerRoll = random.nextDouble();
 
-                    if (powerRoll < 0.55) {
+                    if (powerRoll < 0.45) {
                         type = BlockType.EXTRA_BALL;
-                    } else if (powerRoll < 0.75) {
+                    } else if (powerRoll < 0.65) {
                         type = BlockType.FIRE_POWER;
-                    } else if (powerRoll < 0.90) {
+                    } else if (powerRoll < 0.80) {
                         type = BlockType.ICE_POWER;
-                    } else {
+                    } else if (powerRoll < 0.92) {
                         type = BlockType.PIERCE_POWER;
+                    } else {
+                        type = BlockType.SHRINK_POWER;
                     }
 
                     specialSpawned = true;
@@ -881,6 +905,11 @@ public class GameController {
 
     public void setForcePierceRound(boolean forcePierceRound) {
         this.forcePierceRound = forcePierceRound;
+        updateWaitingBallColor();
+    }
+
+    public void setForceShrinkRound(boolean forceShrinkRound) {
+        this.forceShrinkRound = forceShrinkRound;
         updateWaitingBallColor();
     }
 
@@ -942,4 +971,7 @@ public class GameController {
 
 
         endWave();
-    }}
+    }
+
+
+}

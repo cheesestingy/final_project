@@ -21,6 +21,7 @@ public class Ball {
     boolean fireBall = false;
     boolean iceBall = false;
     boolean pierceBall = false;
+    boolean shrinkBall = false;
 
 
     private Pane root;
@@ -66,6 +67,8 @@ public class Ball {
         fireBall = false;
         iceBall = false;
         circle.setFill(Color.WHITE);
+        shrinkBall = false;
+        circle.setRadius(GameConfig.BALL_RADIUS);
     }
 
     private void setGlow(Color color) {
@@ -85,6 +88,8 @@ public class Ball {
             line.setStroke(Color.LIGHTBLUE);
         } else if (pierceBall){
             line.setStroke(Color.BLACK);
+        } else if (shrinkBall) {
+            line.setStroke(Color.HOTPINK);
         } else {
             line.setStroke(Color.WHITE);
         }
@@ -137,6 +142,18 @@ public class Ball {
         }
 
         return false;
+    }
+
+    public void setShrinkBall(boolean shrinkBall) {
+        this.shrinkBall = shrinkBall;
+
+        if (shrinkBall) {
+            circle.setRadius(GameConfig.BALL_RADIUS * GameConfig.SHRINK_BALL_SIZE);
+            circle.setFill(Color.HOTPINK);
+            setGlow(Color.HOTPINK);
+        } else {
+            circle.setRadius(GameConfig.BALL_RADIUS);
+        }
     }
 
 

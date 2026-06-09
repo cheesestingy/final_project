@@ -14,7 +14,8 @@ public class EditModeManager {
             "NORMAL",
             "FIRE",
             "ICE",
-            "PIERCE"
+            "PIERCE",
+            "SHRINK"
     };
 
     private GameController game;
@@ -83,18 +84,27 @@ public class EditModeManager {
             game.setForceFireRound(false);
             game.setForceIceRound(false);
             game.setForcePierceRound(false);
+            game.setForceShrinkRound(false);
         } else if (ballTypes[ballTypeIndex].equals("FIRE")) {
             game.setForceFireRound(true);
             game.setForceIceRound(false);
             game.setForcePierceRound(false);
+            game.setForceShrinkRound(false);
         } else if (ballTypes[ballTypeIndex].equals("ICE")) {
             game.setForceFireRound(false);
             game.setForceIceRound(true);
             game.setForcePierceRound(false);
+            game.setForceShrinkRound(false);
         } else if (ballTypes[ballTypeIndex].equals("PIERCE")) {
             game.setForceFireRound(false);
             game.setForceIceRound(false);
             game.setForcePierceRound(true);
+            game.setForceShrinkRound(false);
+        } else if (ballTypes[ballTypeIndex].equals("SHRINK")) {
+            game.setForceFireRound(false);
+            game.setForceIceRound(false);
+            game.setForcePierceRound(false);
+            game.setForceShrinkRound(true);
         }
     }
 

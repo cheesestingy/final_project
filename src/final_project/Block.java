@@ -87,6 +87,23 @@ public class Block {
             text.setX(rect.getX() + (rect.getWidth() - text.getLayoutBounds().getWidth()) / 2);
 
             root.getChildren().addAll(rect, ring, text);
+        } else if (type == BlockType.SHRINK_POWER) {
+            ring = new Circle(
+                    x + GameConfig.BLOCK_SIZE / 2,
+                    y + GameConfig.BLOCK_SIZE / 2,
+                    GameConfig.BLOCK_SIZE / 2 - 8
+            );
+
+            ring.setFill(Color.TRANSPARENT);
+            ring.setStroke(Color.HOTPINK);
+            ring.setStrokeWidth(4);
+
+            rect.setFill(Color.PINK);
+            text.setText("S");
+            text.setFill(Color.HOTPINK);
+            text.setX(rect.getX() + (rect.getWidth() - text.getLayoutBounds().getWidth()) / 2);
+
+            root.getChildren().addAll(rect, ring, text);
         } else {
             text.setFill(Color.WHITE);
             updateVisuals();
@@ -136,6 +153,13 @@ public class Block {
             text.setFill(Color.BLACK);
             text.setX(rect.getX() + (rect.getWidth() - text.getLayoutBounds().getWidth()) / 2);
             rect.setFill(Color.GRAY);
+            return;
+        }
+        if (type == BlockType.SHRINK_POWER) {
+            text.setText("S");
+            text.setFill(Color.HOTPINK);
+            text.setX(rect.getX() + (rect.getWidth() - text.getLayoutBounds().getWidth()) / 2);
+            rect.setFill(Color.PINK);
             return;
         }
 
