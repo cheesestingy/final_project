@@ -10,8 +10,10 @@ public class Ball {
     double vy = 0;
     boolean active = false;
     boolean returning = false;
+
     boolean fireBall = false;
     boolean iceBall = false;
+
     public Ball(double x, double y, Pane root) {
         circle = new Circle(x, y, GameConfig.BALL_RADIUS, Color.WHITE);
         root.getChildren().add(circle);
@@ -19,8 +21,14 @@ public class Ball {
 
     public void setFireBall(boolean fireBall) {
         this.fireBall = fireBall;
-        circle.setFill(fireBall ? Color.ORANGERED : Color.WHITE);
+
+        if (fireBall) {
+            circle.setFill(Color.ORANGERED);
+        } else if (!iceBall) {
+            circle.setFill(Color.WHITE);
+        }
     }
+
     public void setIceBall(boolean iceBall) {
         this.iceBall = iceBall;
 
@@ -29,5 +37,11 @@ public class Ball {
         } else if (!fireBall) {
             circle.setFill(Color.WHITE);
         }
+    }
+
+    public void resetType() {
+        fireBall = false;
+        iceBall = false;
+        circle.setFill(Color.WHITE);
     }
 }

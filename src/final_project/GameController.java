@@ -37,8 +37,12 @@ public class GameController {
 
     private Text editModeText;
     private EditModeManager editModeManager;
+
     private boolean forceFireRound = false;
     private boolean forceIceRound = false;
+    private boolean iceRoundActive = false;
+    private int iceRoundsAvailable = 0;
+    private boolean freezeAppliedThisRound = false;
 
     private List<Ball> balls = new ArrayList<>();
     private List<Block> blocks = new ArrayList<>();
@@ -52,9 +56,6 @@ public class GameController {
 
     private int fireRoundsAvailable = 0;
     private boolean fireRoundActive = false;
-
-    private int freezeTurnsAvailable = 0;
-    private boolean freezeThisWave = false;
 
     private double startX = GameConfig.PLAYFIELD_MIN_X + (GameConfig.PLAYFIELD_WIDTH / 2.0);
     private final double startY = GameConfig.PLAYFIELD_MAX_Y - GameConfig.BALL_RADIUS;
@@ -117,6 +118,7 @@ public class GameController {
         primaryStage.setTitle("Block Breaker Final Project");
         primaryStage.setScene(scene);
         primaryStage.show();
+        root.requestFocus();
 
         balls.add(new Ball(startX, startY, root));
         spawnRow();
@@ -141,10 +143,12 @@ public class GameController {
 
         root.getChildren().add(editModeText);
 
+        root.setFocusTraversable(true);
+        root.setOnMouseClicked(e -> root.requestFocus());
+
         editModeManager = new EditModeManager(this, editModeText);
         editModeManager.attach(scene);
     }
-
     private void setupUI() {
         waveText = new Text("Wave: " + wave);
         waveText.setFont(Font.font("Arial", FontWeight.BOLD, 24));
@@ -267,6 +271,7 @@ public class GameController {
                 fireDelayCounter = 0;
                 firstBallLanded = false;
                 extraBallsEarned = 0;
+                freezeAppliedThisRound = false;
 
                 if (fireRoundsAvailable > 0) {
                     fireRoundActive = true;
@@ -275,6 +280,14 @@ public class GameController {
                     fireRoundActive = false;
                 }
 
+                if (forceIceRound) {
+                    iceRoundActive = true;
+                } else if (iceRoundsAvailable > 0) {
+                    iceRoundActive = true;
+                    iceRoundsAvailable--;
+                } else {
+                    iceRoundActive = false;
+                }
                 updateRemainingBallsUI();
             }
         }
@@ -363,7 +376,7 @@ public class GameController {
                 b.active = true;
 
                 b.setFireBall(fireRoundActive || forceFireRound);
-                b.setIceBall(forceIceRound);
+                b.setIceBall(iceRoundActive);
 
                 ballsFired++;
                 fireDelayCounter = 0;
@@ -479,8 +492,9 @@ public class GameController {
                 if (b.fireBall) {
                     fireExplosion(block);
                 }
+
                 if (b.iceBall) {
-                    freezeTurnsAvailable++;
+                    iceExplosion(block);
                 }
 
                 break;
@@ -526,6 +540,23 @@ public class GameController {
         }
     }
 
+    private void iceExplosion(Block centerBlock) {
+        double centerX = centerBlock.rect.getX() + centerBlock.rect.getWidth() / 2.0;
+        double centerY = centerBlock.rect.getY() + centerBlock.rect.getHeight() / 2.0;
+
+        for (Block block : blocks) {
+            double blockX = block.rect.getX() + block.rect.getWidth() / 2.0;
+            double blockY = block.rect.getY() + block.rect.getHeight() / 2.0;
+
+            double dx = blockX - centerX;
+            double dy = blockY - centerY;
+            double distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance <= GameConfig.FIRE_EXPLOSION_RADIUS) {
+                block.setFrozen(true);
+            }
+        }
+    }
     private void applyBurnDamage() {
         Iterator<Block> it = blocks.iterator();
 
@@ -555,9 +586,8 @@ public class GameController {
         } else if (block.type == BlockType.FIRE_POWER) {
             fireRoundsAvailable++;
         } else if (block.type == BlockType.ICE_POWER) {
-            freezeTurnsAvailable++;
+            iceRoundsAvailable++;
         }
-
         updateShopUI();
     }
 
@@ -578,19 +608,57 @@ public class GameController {
         return cornerDistanceSq <= Math.pow(c.getRadius(), 2);
     }
 
+
+    private void moveBlocksDownWithFreeze() {
+        List<Block> sortedBlocks = new ArrayList<>(blocks);
+
+        sortedBlocks.sort((a, b) -> Double.compare(b.rect.getY(), a.rect.getY()));
+
+        for (Block block : sortedBlocks) {
+            if (block.frozen) {
+                continue;
+            }
+
+            double nextY = block.rect.getY() + GameConfig.BLOCK_SIZE;
+
+            boolean blocked = false;
+
+            for (Block other : blocks) {
+                if (other == block) continue;
+
+                boolean sameColumn =
+                        Math.abs(other.rect.getX() - block.rect.getX()) < 1;
+
+                boolean targetOccupied =
+                        Math.abs(other.rect.getY() - nextY) < 1;
+
+                if (sameColumn && targetOccupied) {
+                    blocked = true;
+                    break;
+                }
+            }
+
+            if (!blocked) {
+                block.shiftDown();
+            }
+        }
+
+        for (Block block : blocks) {
+            if (block.frozen) {
+                block.setFrozen(false);
+            }
+        }
+    }
+
     private void endWave() {
         applyBurnDamage();
 
         startX = nextStartX;
         wave++;
         fireRoundActive = false;
+        iceRoundActive = false;
 
-        if (freezeTurnsAvailable > 0) {
-            freezeThisWave = true;
-            freezeTurnsAvailable--;
-        } else {
-            freezeThisWave = false;
-        }
+
 
         if (wave > highestWave) {
             highestWave = wave;
@@ -607,11 +675,9 @@ public class GameController {
 
         boolean isGameOver = false;
 
-        for (Block block : blocks) {
-            if (!freezeThisWave) {
-                block.shiftDown();
-            }
+        moveBlocksDownWithFreeze();
 
+        for (Block block : blocks) {
             if (block.rect.getY() + GameConfig.BLOCK_SIZE >= GameConfig.WARNING_LINE_Y) {
                 isGameOver = true;
             }
@@ -620,7 +686,7 @@ public class GameController {
         if (isGameOver) {
             triggerGameOver();
         } else {
-            if (!freezeThisWave) {
+            if (canSpawnNewRow()) {
                 spawnRow();
             }
 
@@ -653,15 +719,15 @@ public class GameController {
         ballDamage = 1;
         damageUpgradeCost = 50;
         firstBallLanded = false;
+
         fireRoundsAvailable = 0;
         fireRoundActive = false;
-        freezeTurnsAvailable = 0;
-        freezeThisWave = false;
+        iceRoundsAvailable = 0;
+
         forceFireRound = false;
         forceIceRound = false;
-
-        freezeTurnsAvailable = 0;
-        freezeThisWave = false;
+        iceRoundActive = false;
+        freezeAppliedThisRound = false;
 
         startX = GameConfig.PLAYFIELD_MIN_X + (GameConfig.PLAYFIELD_WIDTH / 2.0);
         nextStartX = startX;
@@ -675,6 +741,16 @@ public class GameController {
 
         gameOverMenu.setVisible(false);
         state = GameState.AIMING;
+    }
+
+    private boolean canSpawnNewRow() {
+        for (Block block : blocks) {
+            if (block.rect.getY() <= GameConfig.PLAYFIELD_MIN_Y + GameConfig.BLOCK_SIZE + 1) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private void spawnRow() {
@@ -765,9 +841,25 @@ public class GameController {
         updateRemainingBallsUI();
         updateShopUI();
     }
+
     public void forceNextWave() {
         if (state != GameState.AIMING) return;
 
+        for (Ball b : balls) {
+            b.active = false;
+            b.returning = false;
+            b.vx = 0;
+            b.vy = 0;
+            b.circle.setCenterX(startX);
+            b.circle.setCenterY(startY);
+            b.resetType();
+        }
+
+        ballsFired = 0;
+        fireDelayCounter = 0;
+        firstBallLanded = false;
+        extraBallsEarned = 0;
+        freezeAppliedThisRound = false;
+
         endWave();
-    }
-}
+    }}

@@ -2,6 +2,7 @@ package final_project;
 
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.text.Text;
 
 public class EditModeManager {
@@ -25,10 +26,20 @@ public class EditModeManager {
     }
 
     public void attach(Scene scene) {
-        scene.setOnKeyPressed(e -> {
+        scene.addEventFilter(KeyEvent.KEY_RELEASED, e -> {
+
             if (e.getCode() == KeyCode.E) {
                 editMode = !editMode;
+
+                if (editMode) {
+                    applyBallType();
+                } else {
+                    game.setForceFireRound(false);
+                    game.setForceIceRound(false);
+                }
+
                 updateText();
+                e.consume();
                 return;
             }
 
@@ -40,6 +51,8 @@ public class EditModeManager {
                     ballTypeIndex = ballTypes.length - 1;
                 }
                 applyBallType();
+                updateText();
+                e.consume();
             }
 
             if (e.getCode() == KeyCode.RIGHT) {
@@ -48,17 +61,19 @@ public class EditModeManager {
                     ballTypeIndex = 0;
                 }
                 applyBallType();
+                updateText();
+                e.consume();
             }
 
             if (e.getCode() == KeyCode.UP) {
                 game.moveBlocksUpOneRow();
+                e.consume();
             }
 
             if (e.getCode() == KeyCode.DOWN) {
                 game.forceNextWave();
+                e.consume();
             }
-
-            updateText();
         });
     }
 

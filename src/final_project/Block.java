@@ -15,6 +15,7 @@ public class Block {
     int health;
     BlockType type;
     boolean burning = false;
+    boolean frozen = false;
 
     private Pane root;
 
@@ -78,6 +79,11 @@ public class Block {
         updateVisuals();
     }
 
+    public void setFrozen(boolean frozen) {
+        this.frozen = frozen;
+        updateVisuals();
+    }
+
     public void updateVisuals() {
         if (type == BlockType.FIRE_POWER) {
             text.setText("F");
@@ -96,7 +102,9 @@ public class Block {
         text.setText(String.valueOf(health));
         text.setX(rect.getX() + (rect.getWidth() - text.getLayoutBounds().getWidth()) / 2);
 
-        if (burning) {
+        if (frozen) {
+            rect.setFill(Color.LIGHTBLUE);
+        } else if (burning) {
             rect.setFill(Color.ORANGERED);
         } else {
             double hue = (health * 12) % 360;
