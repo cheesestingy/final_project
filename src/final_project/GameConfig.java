@@ -29,7 +29,7 @@ public class GameConfig {
 
     public static final int BALL_DAMAGE_START = 1;
     public static final double BALL_DAMAGE_UPGRADE_MULTIPLIER = 1.05;
-    public static final int BALL_DAMAGE_MAX = 6767676767676767;
+    public static final int BALL_DAMAGE_MAX = 67676767;
 
     public static final int BALL_DAMAGE_UPGRADE_COST_START = 50;
     public static final int BALL_DAMAGE_UPGRADE_COST_INCREASE = 50;
