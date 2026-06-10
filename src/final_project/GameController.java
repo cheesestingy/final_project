@@ -1,5 +1,8 @@
 package final_project;
 
+import java.math.BigInteger;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import javafx.animation.AnimationTimer;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -46,9 +49,10 @@ public class GameController {
     private int fireRoundsAvailable = 0;
     private boolean fireRoundActive = false;
     private boolean forceFireRound = false;
-    private boolean forceIceRound = false;
     private boolean iceRoundActive = false;
+    private boolean forceIceRound = false;
     private int iceRoundsAvailable = 0;
+
     private int pierceRoundsAvailable = 0;
     private boolean pierceRoundActive = false;
     private boolean forcePierceRound = false;
@@ -57,13 +61,13 @@ public class GameController {
     private boolean forceShrinkRound = false;
 
 
-    private List<Ball> balls = new ArrayList<>();
-    private List<Block> blocks = new ArrayList<>();
+    final private List<Ball> balls = new ArrayList<>();
+    final private List<Block> blocks = new ArrayList<>();
 
     private int wave = 1;
     private int highestWave = 1;
     private int totalBalls = 1;
-    private int money = 0;
+    private BigInteger money = BigInteger.ZERO;
     private int ballDamage = GameConfig.BALL_DAMAGE_START;
     private int damageUpgradeCost = GameConfig.BALL_DAMAGE_UPGRADE_COST_START;
     private double powerUpSpawnChance = GameConfig.POWER_UP_SPAWN_CHANCE_START;
@@ -282,10 +286,10 @@ public class GameController {
     private void handleUpgradePurchase() {
         if (state == GameState.GAME_OVER) return;
 
-        if (money >= damageUpgradeCost &&
+        if (money.compareTo(BigInteger.valueOf(damageUpgradeCost)) >= 0 &&
                 ballDamage < GameConfig.BALL_DAMAGE_MAX) {
             soundManager.playBuy();
-            money -= damageUpgradeCost;
+            money = money.subtract(BigInteger.valueOf(damageUpgradeCost));
             ballDamage = (int) Math.ceil(
                     ballDamage * GameConfig.BALL_DAMAGE_UPGRADE_MULTIPLIER
             );
@@ -302,10 +306,10 @@ public class GameController {
     private void handlePowerUpUpgradePurchase() {
         if (state == GameState.GAME_OVER) return;
 
-        if (money >= powerUpUpgradeCost &&
+        if (money.compareTo(BigInteger.valueOf(powerUpUpgradeCost)) >= 0 &&
                 powerUpSpawnChance < GameConfig.POWER_UP_SPAWN_CHANCE_MAX) {
             soundManager.playBuy();
-            money -= powerUpUpgradeCost;
+            money = money.subtract(BigInteger.valueOf(powerUpUpgradeCost));
             powerUpSpawnChance += GameConfig.POWER_UP_SPAWN_CHANCE_UPGRADE_AMOUNT;
 
             if (powerUpSpawnChance > GameConfig.POWER_UP_SPAWN_CHANCE_MAX) {
@@ -319,10 +323,10 @@ public class GameController {
     private void handleCoinRewardUpgradePurchase() {
         if (state == GameState.GAME_OVER) return;
 
-        if (money >= coinRewardUpgradeCost &&
+        if (money.compareTo(BigInteger.valueOf(coinRewardUpgradeCost)) >= 0 &&
                 coinRewardMultiplier < GameConfig.COIN_REWARD_MULTIPLIER_MAX) {
             soundManager.playBuy();
-            money -= coinRewardUpgradeCost;
+            money = money.subtract(BigInteger.valueOf(coinRewardUpgradeCost));
             coinRewardMultiplier += GameConfig.COIN_REWARD_MULTIPLIER_UPGRADE_AMOUNT;
 
             if (coinRewardMultiplier > GameConfig.COIN_REWARD_MULTIPLIER_MAX) {
@@ -346,7 +350,7 @@ public class GameController {
 
         boolean damageMaxed = ballDamage >= GameConfig.BALL_DAMAGE_MAX;
 
-        upgradeDamageBtn.setDisable(money < damageUpgradeCost || damageMaxed);
+        upgradeDamageBtn.setDisable(money.compareTo(BigInteger.valueOf(damageUpgradeCost)) == -1 || damageMaxed);
 
         if (damageMaxed) {
             upgradeDamageBtn.setText(
@@ -367,7 +371,7 @@ public class GameController {
 
         boolean powerUpMaxed = powerUpSpawnChance >= GameConfig.POWER_UP_SPAWN_CHANCE_MAX;
 
-        upgradePowerUpBtn.setDisable(money < powerUpUpgradeCost || powerUpMaxed);
+        upgradePowerUpBtn.setDisable(money.compareTo(BigInteger.valueOf(powerUpUpgradeCost)) == -1 || powerUpMaxed);
 
         if (powerUpMaxed) {
             upgradePowerUpBtn.setText(
@@ -386,7 +390,7 @@ public class GameController {
 
         boolean coinMaxed = coinRewardMultiplier >= GameConfig.COIN_REWARD_MULTIPLIER_MAX;
 
-        upgradeCoinRewardBtn.setDisable(money < coinRewardUpgradeCost || coinMaxed);
+        upgradeCoinRewardBtn.setDisable(money.compareTo(BigInteger.valueOf(coinRewardUpgradeCost)) == -1 || coinMaxed);
 
         if (coinMaxed) {
             upgradeCoinRewardBtn.setText(
@@ -689,9 +693,9 @@ public class GameController {
                     bounceFromBlock(b, block);
                 }
                 if (!b.pierceBall || b.canPierceDamage(block)) {
-                    block.health -= ballDamage;
+                    block.health = block.health.subtract(BigInteger.valueOf(ballDamage));
                 }
-                boolean destroyed = block.health <= 0;
+                boolean destroyed = block.health.compareTo(BigInteger.ZERO) <= 0;
 
                 if (destroyed) {
                     soundManager.playDestroy();
@@ -779,10 +783,14 @@ public class GameController {
             Block block = it.next();
 
             if (block.burning) {
-                int burnDamage = Math.max(1, (int) Math.ceil(block.health * GameConfig.BURN_PERCENT));
-                block.health -= burnDamage;
+                BigDecimal healthDec = new BigDecimal(block.health);
+                BigDecimal burnDec = new BigDecimal(GameConfig.BURN_PERCENT);
+                BigInteger burnDamage = healthDec.multiply(burnDec)
+                                                 .setScale(0, RoundingMode.CEILING)
+                                                 .toBigInteger();
+                block.health = block.health.subtract(burnDamage);
 
-                if (block.health <= 0) {
+                if (block.health.compareTo(BigInteger.ZERO) <= 0) {
                     handleBlockDestroyed(block);
                     block.remove();
                     it.remove();
@@ -794,7 +802,13 @@ public class GameController {
     }
 
     private void handleBlockDestroyed(Block block) {
-        money += (int) Math.round(block.maxHealth * coinRewardMultiplier);
+        BigDecimal healthDec = new BigDecimal(block.max_health);
+        BigDecimal multiplierDec = BigDecimal.valueOf(coinRewardMultiplier);
+
+        BigInteger reward = healthDec.multiply(multiplierDec)
+                .setScale(0, RoundingMode.HALF_UP)
+                .toBigInteger();
+        money = money.add(reward);
 
         if (block.type == BlockType.EXTRA_BALL) {
             extraBallsEarned++;
@@ -944,7 +958,7 @@ public class GameController {
         totalBalls = 1;
         ballsFired = 0;
         extraBallsEarned = 0;
-        money = 0;
+        money = BigInteger.ZERO;
         coinRewardMultiplier = GameConfig.COIN_REWARD_MULTIPLIER_START;
         coinRewardUpgradeCost = GameConfig.COIN_REWARD_UPGRADE_COST_START;
         ballDamage = GameConfig.BALL_DAMAGE_START;
@@ -1003,12 +1017,14 @@ public class GameController {
         int columns = 8;
         boolean specialSpawned = false;
 
-        int blockHealth;
-
+        BigInteger blockHealth;
         if (wave <= 10) {
-            blockHealth = wave;
+            blockHealth = BigInteger.valueOf(wave);
         } else {
-            blockHealth = (int) Math.round(10 * Math.pow(1.3, wave - 10));
+            double doubleHealth = 10 * Math.pow(1.3, wave - 10);
+            blockHealth = BigDecimal.valueOf(doubleHealth)
+                        .setScale(0, RoundingMode.HALF_UP) // Replaces Math.round()
+                        .toBigInteger();
         }
 
         for (int i = 0; i < columns; i++) {

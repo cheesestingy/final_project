@@ -1,5 +1,6 @@
 package final_project;
 
+import java.math.BigInteger;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
@@ -14,7 +15,8 @@ public class Block {
     Rectangle rect;
     Text text;
     Circle ring;
-    int health;
+    BigInteger health;
+    BigInteger max_health;
     BlockType type;
     boolean burning = false;
     boolean frozen = false;
@@ -22,10 +24,10 @@ public class Block {
 
     private Pane root;
 
-    public Block(double x, double y, int health, BlockType type, Pane root) {
+    public Block(double x, double y, BigInteger health, BlockType type, Pane root) {
         this.root = root;
         this.health = health;
-        this.maxHealth = health;
+        this.max_health = health;
         this.type = type;
 
         rect = new Rectangle(x + 2, y + 2, GameConfig.BLOCK_SIZE - 4, GameConfig.BLOCK_SIZE - 4);
@@ -175,7 +177,9 @@ public class Block {
             rect.setFill(Color.ORANGE);
             setGlow(Color.ORANGE);
         } else {
-            double hue = (health * 12) % 360;
+            double hue = health.multiply(BigInteger.valueOf(12))
+                    .remainder(BigInteger.valueOf(360))
+                    .doubleValue();
             rect.setFill(Color.hsb(hue, 0.75, 0.9));
             rect.setStroke(Color.LIGHTGRAY);
             rect.setStrokeWidth(1.5);
