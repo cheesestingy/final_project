@@ -6,5 +6,6 @@ public enum BlockType {
     FIRE_POWER,
     ICE_POWER,
     PIERCE_POWER,
-    SHRINK_POWER
+    SHRINK_POWER,
+    BOSS
 }

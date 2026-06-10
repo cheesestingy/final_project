@@ -1,8 +1,5 @@
 package final_project;
 
-import java.math.BigInteger;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import javafx.animation.AnimationTimer;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -49,10 +46,9 @@ public class GameController {
     private int fireRoundsAvailable = 0;
     private boolean fireRoundActive = false;
     private boolean forceFireRound = false;
-    private boolean iceRoundActive = false;
     private boolean forceIceRound = false;
+    private boolean iceRoundActive = false;
     private int iceRoundsAvailable = 0;
-
     private int pierceRoundsAvailable = 0;
     private boolean pierceRoundActive = false;
     private boolean forcePierceRound = false;
@@ -61,14 +57,14 @@ public class GameController {
     private boolean forceShrinkRound = false;
 
 
-    final private List<Ball> balls = new ArrayList<>();
-    final private List<Block> blocks = new ArrayList<>();
-    private static final String[] SUFFIXES = {"", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc"};
+    private List<Ball> balls = new ArrayList<>();
+    private List<Block> blocks = new ArrayList<>();
+    private List<Block> pendingBlocksToAdd = new ArrayList<>();
 
     private int wave = 1;
     private int highestWave = 1;
     private int totalBalls = 1;
-    private BigInteger money = BigInteger.ZERO;
+    private int money = 0;
     private int ballDamage = GameConfig.BALL_DAMAGE_START;
     private int damageUpgradeCost = GameConfig.BALL_DAMAGE_UPGRADE_COST_START;
     private double powerUpSpawnChance = GameConfig.POWER_UP_SPAWN_CHANCE_START;
@@ -287,10 +283,10 @@ public class GameController {
     private void handleUpgradePurchase() {
         if (state == GameState.GAME_OVER) return;
 
-        if (money.compareTo(BigInteger.valueOf(damageUpgradeCost)) >= 0 &&
+        if (money >= damageUpgradeCost &&
                 ballDamage < GameConfig.BALL_DAMAGE_MAX) {
             soundManager.playBuy();
-            money = money.subtract(BigInteger.valueOf(damageUpgradeCost));
+            money -= damageUpgradeCost;
             ballDamage = (int) Math.ceil(
                     ballDamage * GameConfig.BALL_DAMAGE_UPGRADE_MULTIPLIER
             );
@@ -299,7 +295,9 @@ public class GameController {
                 ballDamage = GameConfig.BALL_DAMAGE_MAX;
             }
 
-            damageUpgradeCost += GameConfig.BALL_DAMAGE_UPGRADE_COST_INCREASE;
+            damageUpgradeCost = (int) Math.ceil(
+                    damageUpgradeCost * GameConfig.BALL_DAMAGE_COST_MULTIPLIER
+            );
             updateShopUI();
         }
     }
@@ -307,51 +305,55 @@ public class GameController {
     private void handlePowerUpUpgradePurchase() {
         if (state == GameState.GAME_OVER) return;
 
-        if (money.compareTo(BigInteger.valueOf(powerUpUpgradeCost)) >= 0 &&
+        if (money >= powerUpUpgradeCost &&
                 powerUpSpawnChance < GameConfig.POWER_UP_SPAWN_CHANCE_MAX) {
             soundManager.playBuy();
-            money = money.subtract(BigInteger.valueOf(powerUpUpgradeCost));
+            money -= powerUpUpgradeCost;
             powerUpSpawnChance += GameConfig.POWER_UP_SPAWN_CHANCE_UPGRADE_AMOUNT;
 
             if (powerUpSpawnChance > GameConfig.POWER_UP_SPAWN_CHANCE_MAX) {
                 powerUpSpawnChance = GameConfig.POWER_UP_SPAWN_CHANCE_MAX;
             }
 
-            powerUpUpgradeCost += GameConfig.POWER_UP_UPGRADE_COST_INCREASE;
+            powerUpUpgradeCost = (int) Math.ceil(
+                    powerUpUpgradeCost * GameConfig.POWER_UP_COST_MULTIPLIER
+            );
             updateShopUI();
         }
     }
     private void handleCoinRewardUpgradePurchase() {
         if (state == GameState.GAME_OVER) return;
 
-        if (money.compareTo(BigInteger.valueOf(coinRewardUpgradeCost)) >= 0 &&
+        if (money >= coinRewardUpgradeCost &&
                 coinRewardMultiplier < GameConfig.COIN_REWARD_MULTIPLIER_MAX) {
             soundManager.playBuy();
-            money = money.subtract(BigInteger.valueOf(coinRewardUpgradeCost));
+            money -= coinRewardUpgradeCost;
             coinRewardMultiplier += GameConfig.COIN_REWARD_MULTIPLIER_UPGRADE_AMOUNT;
 
             if (coinRewardMultiplier > GameConfig.COIN_REWARD_MULTIPLIER_MAX) {
                 coinRewardMultiplier = GameConfig.COIN_REWARD_MULTIPLIER_MAX;
             }
 
-            coinRewardUpgradeCost += GameConfig.COIN_REWARD_UPGRADE_COST_INCREASE;
+            coinRewardUpgradeCost = (int) Math.ceil(
+                    coinRewardUpgradeCost * GameConfig.COIN_REWARD_COST_MULTIPLIER
+            );
             updateShopUI();
         }
     }
 
     private void updateShopUI() {
-        moneyText.setText("Money: $" + formatBigNumber(money));
+        moneyText.setText("Money: $" + money);
 
         // 攻擊升級
         upgradeDamageBtn.setText(
                 "Ball Damage +\n" +
-                        "Cost: $" + formatBigNumber(BigInteger.valueOf(damageUpgradeCost)) + "\n" +
+                        "Cost: $" + damageUpgradeCost + "\n" +
                         "Current: " + ballDamage
         );
 
         boolean damageMaxed = ballDamage >= GameConfig.BALL_DAMAGE_MAX;
 
-        upgradeDamageBtn.setDisable(money.compareTo(BigInteger.valueOf(damageUpgradeCost)) == -1 || damageMaxed);
+        upgradeDamageBtn.setDisable(money < damageUpgradeCost || damageMaxed);
 
         if (damageMaxed) {
             upgradeDamageBtn.setText(
@@ -366,13 +368,13 @@ public class GameController {
 
         upgradePowerUpBtn.setText(
                 "Power Up Rate +\n" +
-                        "Cost: $" + formatBigNumber(BigInteger.valueOf(powerUpUpgradeCost)) + "\n" +
+                        "Cost: $" + powerUpUpgradeCost + "\n" +
                         "Current: " + percent + "%"
         );
 
         boolean powerUpMaxed = powerUpSpawnChance >= GameConfig.POWER_UP_SPAWN_CHANCE_MAX;
 
-        upgradePowerUpBtn.setDisable(money.compareTo(BigInteger.valueOf(powerUpUpgradeCost)) == -1 || powerUpMaxed);
+        upgradePowerUpBtn.setDisable(money < powerUpUpgradeCost || powerUpMaxed);
 
         if (powerUpMaxed) {
             upgradePowerUpBtn.setText(
@@ -385,19 +387,19 @@ public class GameController {
         // 金幣倍率升級
         upgradeCoinRewardBtn.setText(
                 "Coin Bonus +\n" +
-                        "Cost: $" + formatBigNumber(BigInteger.valueOf(coinRewardUpgradeCost)) + "\n" +
+                        "Cost: $" + coinRewardUpgradeCost + "\n" +
                         "Current: x" + String.format("%.1f", coinRewardMultiplier)
         );
 
         boolean coinMaxed = coinRewardMultiplier >= GameConfig.COIN_REWARD_MULTIPLIER_MAX;
 
-        upgradeCoinRewardBtn.setDisable(money.compareTo(BigInteger.valueOf(coinRewardUpgradeCost)) == -1 || coinMaxed);
+        upgradeCoinRewardBtn.setDisable(money < coinRewardUpgradeCost || coinMaxed);
 
         if (coinMaxed) {
             upgradeCoinRewardBtn.setText(
                     "Coin Bonus\n" +
                             "MAX\n" +
-                            "Current: x" + String.format("%.1f",coinRewardMultiplier)
+                            "Current: x" + String.format("%.1f", coinRewardMultiplier)
             );
         }
     }
@@ -689,16 +691,30 @@ public class GameController {
             Block block = it.next();
 
             if (isIntersecting(b.circle, block.rect)) {
-                soundManager.playHit();
+
+                if (!b.pierceBall) {
+                    soundManager.playHit();
+                }
+
+
                 if (!b.pierceBall) {
                     bounceFromBlock(b, block);
                 }
-                if (!b.pierceBall || b.canPierceDamage(block)) {
-                    block.health = block.health.subtract(BigInteger.valueOf(ballDamage));
+
+                if (!block.invincible) {
+                    if (!b.pierceBall || b.canPierceDamage(block)) {
+                        block.health -= ballDamage;
+                    }
                 }
-                boolean destroyed = block.health.compareTo(BigInteger.ZERO) <= 0;
+
+                boolean destroyed = block.health <= 0;
 
                 if (destroyed) {
+                    if (block.type == BlockType.BOSS && !block.alreadySplit) {
+                        block.alreadySplit = true;
+                        splitBoss(block);
+                    }
+
                     soundManager.playDestroy();
                     handleBlockDestroyed(block);
                     block.remove();
@@ -707,18 +723,25 @@ public class GameController {
                     block.updateVisuals();
                 }
 
-                if (b.fireBall) {
-                    fireExplosion(block);
-                }
+                if (!block.invincible) {
+                    if (b.fireBall) {
+                        fireExplosion(block);
+                    }
 
-                if (b.iceBall) {
-                    iceExplosion(block);
+                    if (b.iceBall) {
+                        iceExplosion(block);
+                    }
                 }
 
                 if (!b.pierceBall) {
                     break;
                 }
             }
+        }
+
+        if (!pendingBlocksToAdd.isEmpty()) {
+            blocks.addAll(pendingBlocksToAdd);
+            pendingBlocksToAdd.clear();
         }
     }
 
@@ -754,8 +777,9 @@ public class GameController {
             double dy = blockY - centerY;
             double distance = Math.sqrt(dx * dx + dy * dy);
 
-            if (distance <= GameConfig.FIRE_EXPLOSION_RADIUS) {
+            if (distance <= GameConfig.FIRE_EXPLOSION_RADIUS && !block.burning && !block.invincible) {
                 block.setBurning(true);
+                soundManager.playBurn();
             }
         }
     }
@@ -772,8 +796,9 @@ public class GameController {
             double dy = blockY - centerY;
             double distance = Math.sqrt(dx * dx + dy * dy);
 
-            if (distance <= GameConfig.ICE_EXPLOSION_RADIUS) {
+            if (distance <= GameConfig.ICE_EXPLOSION_RADIUS && !block.frozen && !block.invincible) {
                 block.setFrozen(true);
+                soundManager.playFreeze();
             }
         }
     }
@@ -784,14 +809,10 @@ public class GameController {
             Block block = it.next();
 
             if (block.burning) {
-                BigDecimal healthDec = new BigDecimal(block.health);
-                BigDecimal burnDec = new BigDecimal(GameConfig.BURN_PERCENT);
-                BigInteger burnDamage = healthDec.multiply(burnDec)
-                                                 .setScale(0, RoundingMode.CEILING)
-                                                 .toBigInteger();
-                block.health = block.health.subtract(burnDamage);
+                int burnDamage = Math.max(1, (int) Math.ceil(block.health * GameConfig.BURN_PERCENT));
+                block.health -= burnDamage;
 
-                if (block.health.compareTo(BigInteger.ZERO) <= 0) {
+                if (block.health <= 0) {
                     handleBlockDestroyed(block);
                     block.remove();
                     it.remove();
@@ -803,28 +824,27 @@ public class GameController {
     }
 
     private void handleBlockDestroyed(Block block) {
-        BigDecimal healthDec = new BigDecimal(block.max_health);
-        BigDecimal multiplierDec = BigDecimal.valueOf(coinRewardMultiplier);
-
-        BigInteger reward = healthDec.multiply(multiplierDec)
-                .setScale(0, RoundingMode.HALF_UP)
-                .toBigInteger();
-        money = money.add(reward);
+        money += (int) Math.round(block.maxHealth * coinRewardMultiplier);
 
         if (block.type == BlockType.EXTRA_BALL) {
             extraBallsEarned++;
             soundManager.playPowerup();
+
         } else if (block.type == BlockType.FIRE_POWER) {
             fireRoundsAvailable++;
             soundManager.playPowerup();
+
         } else if (block.type == BlockType.ICE_POWER) {
             iceRoundsAvailable++;
             soundManager.playPowerup();
+
         } else if (block.type == BlockType.PIERCE_POWER) {
             pierceRoundsAvailable++;
             soundManager.playPowerup();
-        }  else if (block.type == BlockType.SHRINK_POWER) {
+
+        } else if (block.type == BlockType.SHRINK_POWER) {
             shrinkRoundsAvailable++;
+            soundManager.playPowerup();
         }
 
         updateShopUI();
@@ -851,27 +871,31 @@ public class GameController {
     private void moveBlocksDownWithFreeze() {
         List<Block> sortedBlocks = new ArrayList<>(blocks);
 
+        // 從下面的方塊先處理，避免上面的方塊先移動穿過下面方塊
         sortedBlocks.sort((a, b) -> Double.compare(b.rect.getY(), a.rect.getY()));
 
         for (Block block : sortedBlocks) {
-            if (block.frozen) {
+            if (block.frozen || block.invincible) {
                 continue;
             }
 
+            double nextX = block.rect.getX();
             double nextY = block.rect.getY() + GameConfig.BLOCK_SIZE;
+            double nextW = block.rect.getWidth();
+            double nextH = block.rect.getHeight();
 
             boolean blocked = false;
 
             for (Block other : blocks) {
                 if (other == block) continue;
 
-                boolean sameColumn =
-                        Math.abs(other.rect.getX() - block.rect.getX()) < 1;
+                boolean overlap =
+                        nextX < other.rect.getX() + other.rect.getWidth()
+                                && nextX + nextW > other.rect.getX()
+                                && nextY < other.rect.getY() + other.rect.getHeight()
+                                && nextY + nextH > other.rect.getY();
 
-                boolean targetOccupied =
-                        Math.abs(other.rect.getY() - nextY) < 1;
-
-                if (sameColumn && targetOccupied) {
+                if (overlap) {
                     blocked = true;
                     break;
                 }
@@ -888,10 +912,166 @@ public class GameController {
             }
         }
     }
+    private boolean isBlockAreaOccupied(double x, double y, double w, double h) {
+        for (Block block : blocks) {
+            boolean overlap =
+                    block.rect.getX() < x + w &&
+                            block.rect.getX() + block.rect.getWidth() > x &&
+                            block.rect.getY() < y + h &&
+                            block.rect.getY() + block.rect.getHeight() > y;
+
+            if (overlap) {
+                return true;
+            }
+        }
+
+        for (Block block : pendingBlocksToAdd) {
+            boolean overlap =
+                    block.rect.getX() < x + w &&
+                            block.rect.getX() + block.rect.getWidth() > x &&
+                            block.rect.getY() < y + h &&
+                            block.rect.getY() + block.rect.getHeight() > y;
+
+            if (overlap) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void splitBoss(Block boss) {
+        if (boss.bossType != 0) return;
+
+        int splitHp = Math.max(
+                1,
+                (int) (boss.maxHealth * GameConfig.BOSS1_SPLIT_HP_RATIO)
+        );
+
+        int created = 0;
+        int attempts = 0;
+
+        while (created < GameConfig.BOSS1_SPLIT_COUNT && attempts < 100) {
+            attempts++;
+
+            int maxCol = 8;
+            int randomCol = random.nextInt(maxCol);
+
+            double x = GameConfig.PLAYFIELD_MIN_X + randomCol * GameConfig.BLOCK_SIZE;
+            double y = boss.rect.getY() + random.nextInt(4) * GameConfig.BLOCK_SIZE;
+
+            double w = GameConfig.BLOCK_SIZE - 4;
+            double h = GameConfig.BLOCK_SIZE - 4;
+
+            if (isBlockAreaOccupied(x + 2, y + 2, w, h)) {
+                continue;
+            }
+
+            Block miniBoss = new Block(
+                    x,
+                    y,
+                    splitHp,
+                    BlockType.NORMAL,
+                    -1,
+                    root
+            );
+
+            miniBoss.rect.setFill(Color.web("#7CFC00"));
+            miniBoss.rect.setStroke(Color.web("#C8E6C9"));
+            miniBoss.rect.setStrokeWidth(3);
+
+            pendingBlocksToAdd.add(miniBoss);
+            created++;
+        }
+    }
+
+    private void boss2StoneSkill() {
+
+        boolean boss2Exists = false;
+
+        for (Block block : blocks) {
+
+            if (block.type == BlockType.BOSS
+                    && block.bossType == 1) {
+
+                boss2Exists = true;
+                break;
+            }
+
+        }
+
+        if (!boss2Exists) {
+            return;
+        }
+
+        // 清除上一回合的石化
+
+        for (Block block : blocks) {
+            if (block.invincible) {
+                block.invincible = false;
+
+                block.burning = false;
+                block.frozen = false;
+
+                block.updateVisuals();
+            }
+        }
+
+        List<Block> candidates = new ArrayList<>();
+
+        for (Block block : blocks) {
+
+            if (block.type == BlockType.BOSS)
+                continue;
+
+            if (block.type != BlockType.NORMAL)
+                continue;
+
+            if (block.invincible)
+                continue;
+
+            candidates.add(block);
+        }
+
+        for (int i = 0;
+             i < GameConfig.BOSS2_STONE_COUNT
+                     && !candidates.isEmpty();
+             i++) {
+
+            int index =
+                    random.nextInt(candidates.size());
+
+            Block chosen =
+                    candidates.remove(index);
+
+            chosen.burning = false;
+            chosen.frozen = false;
+
+            chosen.invincible = true;
+            chosen.updateVisuals();
+        }
+    }
+
+    private void updateTemporaryInvincibleBlocks() {
+        for (Block block : blocks) {
+
+            if (!block.invincible) continue;
+
+            block.invincibleTurns--;
+
+            if (block.invincibleTurns <= 0) {
+                block.invincible = false;
+                block.updateVisuals();
+            }
+        }
+    }
 
     private void endWave() {
         applyBurnDamage();
 
+        updateTemporaryInvincibleBlocks();
+
+        boss2StoneSkill();
         startX = nextStartX;
         wave++;
         fireRoundActive = false;
@@ -925,9 +1105,11 @@ public class GameController {
         if (isGameOver) {
             triggerGameOver();
         } else {
-            if (canSpawnNewRow()) {
-                spawnRow();
-            }
+            if (wave % GameConfig.BOSS_INTERVAL == 0) {
+                spawnBoss();
+            } else {
+            spawnRow();
+        }
 
             state = GameState.AIMING;
             updateRemainingBallsUI();
@@ -959,7 +1141,7 @@ public class GameController {
         totalBalls = 1;
         ballsFired = 0;
         extraBallsEarned = 0;
-        money = BigInteger.ZERO;
+        money = 0;
         coinRewardMultiplier = GameConfig.COIN_REWARD_MULTIPLIER_START;
         coinRewardUpgradeCost = GameConfig.COIN_REWARD_UPGRADE_COST_START;
         ballDamage = GameConfig.BALL_DAMAGE_START;
@@ -1005,8 +1187,15 @@ public class GameController {
     }
 
     private boolean canSpawnNewRow() {
+        double spawnY = GameConfig.PLAYFIELD_MIN_Y + GameConfig.BLOCK_SIZE;
+
         for (Block block : blocks) {
-            if (block.rect.getY() <= GameConfig.PLAYFIELD_MIN_Y + GameConfig.BLOCK_SIZE + 1) {
+
+            boolean touchesSpawnRow =
+                    block.rect.getY() < spawnY + GameConfig.BLOCK_SIZE &&
+                            block.rect.getY() + block.rect.getHeight() > spawnY;
+
+            if (touchesSpawnRow) {
                 return false;
             }
         }
@@ -1014,21 +1203,114 @@ public class GameController {
         return true;
     }
 
+    private int getCurrentWaveBlockHealth() {
+
+        if (wave <= GameConfig.BLOCK_HEALTH_LINEAR_END_WAVE) {
+            return wave;
+        }
+
+        return (int) Math.round(
+                GameConfig.BLOCK_HEALTH_LINEAR_END_WAVE *
+                        Math.pow(
+                                GameConfig.BLOCK_HEALTH_GROWTH_RATE,
+                                wave - GameConfig.BLOCK_HEALTH_LINEAR_END_WAVE
+                        )
+        );
+    }
+    private void removeBlocksInBossArea(double bossX, double bossY, double bossW, double bossH) {
+        Iterator<Block> it = blocks.iterator();
+
+        while (it.hasNext()) {
+            Block block = it.next();
+
+            boolean overlap =
+                    block.rect.getX() < bossX + bossW &&
+                            block.rect.getX() + block.rect.getWidth() > bossX &&
+                            block.rect.getY() < bossY + bossH &&
+                            block.rect.getY() + block.rect.getHeight() > bossY;
+
+            if (overlap) {
+                block.remove();
+                it.remove();
+            }
+        }
+    }
+
+    private void spawnBoss() {
+        int maxBossStartCol = 8 - GameConfig.BOSS_WIDTH_BLOCKS;
+        int bossStartCol = random.nextInt(maxBossStartCol + 1);
+
+        double bossX = GameConfig.PLAYFIELD_MIN_X + bossStartCol * GameConfig.BLOCK_SIZE;
+        double bossY = GameConfig.PLAYFIELD_MIN_Y + GameConfig.BLOCK_SIZE;
+        double bossW = GameConfig.BLOCK_SIZE * 4;
+        double bossH = GameConfig.BLOCK_SIZE * 4;
+
+        removeBlocksInBossArea(bossX, bossY, bossW, bossH);
+        int bossType = random.nextInt(2);
+
+        int baseHealth = getCurrentWaveBlockHealth();
+
+        int bossHealth;
+
+        if (bossType == 0) {
+            bossHealth = (int) (
+                    baseHealth * GameConfig.BOSS_HP_MULTIPLIER_MIN
+            );
+        } else if (bossType == 1) {
+            bossHealth = (int) (
+                    baseHealth * GameConfig.BOSS_HP_MULTIPLIER_MID
+            );
+        } else {
+            bossHealth = (int) (
+                    baseHealth * GameConfig.BOSS_HP_MULTIPLIER_MAX
+            );
+        }
+
+        bossX = GameConfig.PLAYFIELD_MIN_X
+                + GameConfig.BLOCK_SIZE * 2;
+
+        bossY = GameConfig.PLAYFIELD_MIN_Y
+                + GameConfig.BLOCK_SIZE;
+
+        Block boss = new Block(
+                bossX,
+                bossY,
+                bossHealth,
+                BlockType.BOSS,
+                bossType,
+                root
+        );
+
+        blocks.add(boss);
+    }
+
+    private boolean canSpawnBlockAtColumn(int column) {
+        double x = GameConfig.PLAYFIELD_MIN_X + column * GameConfig.BLOCK_SIZE + 2;
+        double y = GameConfig.PLAYFIELD_MIN_Y + GameConfig.BLOCK_SIZE + 2;
+        double w = GameConfig.BLOCK_SIZE - 4;
+        double h = GameConfig.BLOCK_SIZE - 4;
+
+        return !isBlockAreaOccupied(x, y, w, h);
+    }
+
+
     private void spawnRow() {
+
+
+
         int columns = 8;
         boolean specialSpawned = false;
 
-        BigInteger blockHealth;
-        if (wave <= 10) {
-            blockHealth = BigInteger.valueOf(wave);
-        } else {
-            double doubleHealth = 10 * Math.pow(1.3, wave - 10);
-            blockHealth = BigDecimal.valueOf(doubleHealth)
-                        .setScale(0, RoundingMode.HALF_UP) // Replaces Math.round()
-                        .toBigInteger();
-        }
+        int blockHealth;
+
+        blockHealth = getCurrentWaveBlockHealth();
 
         for (int i = 0; i < columns; i++) {
+
+            if (!canSpawnBlockAtColumn(i)) {
+                continue;
+            }
+
             if (random.nextDouble() > 0.4) {
                 BlockType type = BlockType.NORMAL;
 
@@ -1109,13 +1391,6 @@ public class GameController {
             waveText.setText("Wave: " + wave);
         }
 
-        int targetBallCount = Math.max(1, totalBalls - 1);
-        totalBalls = targetBallCount;
-
-        while (balls.size() > totalBalls) {
-            Ball removed = balls.remove(balls.size() - 1);
-            root.getChildren().remove(removed.circle);
-        }
 
         updateRemainingBallsUI();
         updateShopUI();
@@ -1141,16 +1416,6 @@ public class GameController {
 
 
         endWave();
-    }
-
-    public static String formatBigNumber(BigInteger number) {
-        double value = number.doubleValue();
-
-        if (value < 1000) return number.toString();
-        int exponent = (int) (Math.log10(value) / 3);
-        if (exponent >= SUFFIXES.length) return String.format("%.2e", new BigDecimal(number));
-        double displayNum = value / Math.pow(1000, exponent);
-        return String.format("%.2f%s", displayNum, SUFFIXES[exponent]);
     }
 
 
