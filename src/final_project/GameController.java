@@ -63,6 +63,7 @@ public class GameController {
 
     final private List<Ball> balls = new ArrayList<>();
     final private List<Block> blocks = new ArrayList<>();
+    private static final String[] SUFFIXES = {"", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc"};
 
     private int wave = 1;
     private int highestWave = 1;
@@ -339,12 +340,12 @@ public class GameController {
     }
 
     private void updateShopUI() {
-        moneyText.setText("Money: $" + money);
+        moneyText.setText("Money: $" + formatBigNumber(money));
 
         // 攻擊升級
         upgradeDamageBtn.setText(
                 "Ball Damage +\n" +
-                        "Cost: $" + damageUpgradeCost + "\n" +
+                        "Cost: $" + formatBigNumber(BigInteger.valueOf(damageUpgradeCost)) + "\n" +
                         "Current: " + ballDamage
         );
 
@@ -365,7 +366,7 @@ public class GameController {
 
         upgradePowerUpBtn.setText(
                 "Power Up Rate +\n" +
-                        "Cost: $" + powerUpUpgradeCost + "\n" +
+                        "Cost: $" + formatBigNumber(BigInteger.valueOf(powerUpUpgradeCost)) + "\n" +
                         "Current: " + percent + "%"
         );
 
@@ -384,7 +385,7 @@ public class GameController {
         // 金幣倍率升級
         upgradeCoinRewardBtn.setText(
                 "Coin Bonus +\n" +
-                        "Cost: $" + coinRewardUpgradeCost + "\n" +
+                        "Cost: $" + formatBigNumber(BigInteger.valueOf(coinRewardUpgradeCost)) + "\n" +
                         "Current: x" + String.format("%.1f", coinRewardMultiplier)
         );
 
@@ -396,7 +397,7 @@ public class GameController {
             upgradeCoinRewardBtn.setText(
                     "Coin Bonus\n" +
                             "MAX\n" +
-                            "Current: x" + String.format("%.1f", coinRewardMultiplier)
+                            "Current: x" + String.format("%.1f",coinRewardMultiplier)
             );
         }
     }
@@ -1140,6 +1141,16 @@ public class GameController {
 
 
         endWave();
+    }
+
+    public static String formatBigNumber(BigInteger number) {
+        double value = number.doubleValue();
+
+        if (value < 1000) return number.toString();
+        int exponent = (int) (Math.log10(value) / 3);
+        if (exponent >= SUFFIXES.length) return String.format("%.2e", new BigDecimal(number));
+        double displayNum = value / Math.pow(1000, exponent);
+        return String.format("%.2f%s", displayNum, SUFFIXES[exponent]);
     }
 
 

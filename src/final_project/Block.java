@@ -167,7 +167,7 @@ public class Block {
             return;
         }
 
-        text.setText(String.valueOf(health));
+        text.setText(GameController.formatBigNumber(health));
         text.setX(rect.getX() + (rect.getWidth() - text.getLayoutBounds().getWidth()) / 2);
 
         if (frozen) {
