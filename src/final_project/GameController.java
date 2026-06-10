@@ -695,7 +695,7 @@ public class GameController {
                 if (!b.pierceBall) {
                     soundManager.playHit();
                 }
-                
+
 
                 if (!b.pierceBall) {
                     bounceFromBlock(b, block);
@@ -1107,9 +1107,9 @@ public class GameController {
         } else {
             if (wave % GameConfig.BOSS_INTERVAL == 0) {
                 spawnBoss();
-            } else if (canSpawnNewRow()) {
-                spawnRow();
-            }
+            } else {
+            spawnRow();
+        }
 
             state = GameState.AIMING;
             updateRemainingBallsUI();
@@ -1237,7 +1237,10 @@ public class GameController {
     }
 
     private void spawnBoss() {
-        double bossX = GameConfig.PLAYFIELD_MIN_X + GameConfig.BLOCK_SIZE * 2;
+        int maxBossStartCol = 8 - GameConfig.BOSS_WIDTH_BLOCKS;
+        int bossStartCol = random.nextInt(maxBossStartCol + 1);
+
+        double bossX = GameConfig.PLAYFIELD_MIN_X + bossStartCol * GameConfig.BLOCK_SIZE;
         double bossY = GameConfig.PLAYFIELD_MIN_Y + GameConfig.BLOCK_SIZE;
         double bossW = GameConfig.BLOCK_SIZE * 4;
         double bossH = GameConfig.BLOCK_SIZE * 4;
@@ -1281,6 +1284,15 @@ public class GameController {
         blocks.add(boss);
     }
 
+    private boolean canSpawnBlockAtColumn(int column) {
+        double x = GameConfig.PLAYFIELD_MIN_X + column * GameConfig.BLOCK_SIZE + 2;
+        double y = GameConfig.PLAYFIELD_MIN_Y + GameConfig.BLOCK_SIZE + 2;
+        double w = GameConfig.BLOCK_SIZE - 4;
+        double h = GameConfig.BLOCK_SIZE - 4;
+
+        return !isBlockAreaOccupied(x, y, w, h);
+    }
+
 
     private void spawnRow() {
 
@@ -1294,6 +1306,11 @@ public class GameController {
         blockHealth = getCurrentWaveBlockHealth();
 
         for (int i = 0; i < columns; i++) {
+
+            if (!canSpawnBlockAtColumn(i)) {
+                continue;
+            }
+
             if (random.nextDouble() > 0.4) {
                 BlockType type = BlockType.NORMAL;
 

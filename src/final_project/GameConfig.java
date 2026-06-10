@@ -32,6 +32,8 @@ public class GameConfig {
     public static final double BOSS_HP_MULTIPLIER_MID = 30.0;
     public static final double BOSS_HP_MULTIPLIER_MAX = 40.0;
 
+    public static final int BOSS_WIDTH_BLOCKS = 4;
+
 
 
     public static final double WARNING_LINE_Y = PLAYFIELD_MAX_Y - BLOCK_SIZE - 20;
