@@ -47,27 +47,27 @@ public class GameConfig {
 
     public static final double SHRINK_BALL_SIZE = 0.3;
 
-    public static final double BALL_DAMAGE_COST_MULTIPLIER = 1.2;
+    public static final double BALL_DAMAGE_COST_MULTIPLIER = 1.12;
     public static final double POWER_UP_COST_MULTIPLIER = 1.45;
-    public static final double COIN_REWARD_COST_MULTIPLIER = 1.4;
+    public static final double COIN_REWARD_COST_MULTIPLIER = 1.5;
 
     public static final int BALL_DAMAGE_START = 1;
-    public static final double BALL_DAMAGE_UPGRADE_MULTIPLIER = 1.05;
+    public static final double BALL_DAMAGE_UPGRADE_MULTIPLIER = 1.06;
     public static final int BALL_DAMAGE_MAX = 67676767;
 
     public static final int BALL_DAMAGE_UPGRADE_COST_START = 25;
 
 
     public static final double POWER_UP_SPAWN_CHANCE_START = 0.2;
-    public static final double POWER_UP_SPAWN_CHANCE_UPGRADE_AMOUNT = 0.04;
-    public static final double POWER_UP_SPAWN_CHANCE_MAX = 0.60;
+    public static final double POWER_UP_SPAWN_CHANCE_UPGRADE_AMOUNT = 0.03;
+    public static final double POWER_UP_SPAWN_CHANCE_MAX = 0.70;
 
     public static final int POWER_UP_UPGRADE_COST_START = 80;
 
-    public static final double COIN_REWARD_MULTIPLIER_START = 2.0;
-    public static final double COIN_REWARD_MULTIPLIER_UPGRADE_AMOUNT = 0.2;
-    public static final double COIN_REWARD_MULTIPLIER_MAX = 4.0;
+    public static final double COIN_REWARD_MULTIPLIER_START = 1.0;
+    public static final double COIN_REWARD_MULTIPLIER_UPGRADE_AMOUNT = 0.15;
+    public static final double COIN_REWARD_MULTIPLIER_MAX = 6.0;
 
-    public static final int COIN_REWARD_UPGRADE_COST_START = 100;
+    public static final int COIN_REWARD_UPGRADE_COST_START = 80;
 
 }
