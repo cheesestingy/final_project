@@ -294,7 +294,9 @@ public class GameController {
                 ballDamage = GameConfig.BALL_DAMAGE_MAX;
             }
 
-            damageUpgradeCost += GameConfig.BALL_DAMAGE_UPGRADE_COST_INCREASE;
+            damageUpgradeCost = (int) Math.ceil(
+                    damageUpgradeCost * GameConfig.BALL_DAMAGE_COST_MULTIPLIER
+            );
             updateShopUI();
         }
     }
@@ -312,7 +314,9 @@ public class GameController {
                 powerUpSpawnChance = GameConfig.POWER_UP_SPAWN_CHANCE_MAX;
             }
 
-            powerUpUpgradeCost += GameConfig.POWER_UP_UPGRADE_COST_INCREASE;
+            powerUpUpgradeCost = (int) Math.ceil(
+                    powerUpUpgradeCost * GameConfig.POWER_UP_COST_MULTIPLIER
+            );
             updateShopUI();
         }
     }
@@ -329,7 +333,9 @@ public class GameController {
                 coinRewardMultiplier = GameConfig.COIN_REWARD_MULTIPLIER_MAX;
             }
 
-            coinRewardUpgradeCost += GameConfig.COIN_REWARD_UPGRADE_COST_INCREASE;
+            coinRewardUpgradeCost = (int) Math.ceil(
+                    coinRewardUpgradeCost * GameConfig.COIN_REWARD_COST_MULTIPLIER
+            );
             updateShopUI();
         }
     }
@@ -999,17 +1005,97 @@ public class GameController {
         return true;
     }
 
+    private int getCurrentWaveBlockHealth() {
+
+        if (wave <= GameConfig.BLOCK_HEALTH_LINEAR_END_WAVE) {
+            return wave;
+        }
+
+        return (int) Math.round(
+                GameConfig.BLOCK_HEALTH_LINEAR_END_WAVE *
+                        Math.pow(
+                                GameConfig.BLOCK_HEALTH_GROWTH_RATE,
+                                wave - GameConfig.BLOCK_HEALTH_LINEAR_END_WAVE
+                        )
+        );
+    }
+    private void removeBlocksInBossArea(double bossX, double bossY, double bossW, double bossH) {
+        Iterator<Block> it = blocks.iterator();
+
+        while (it.hasNext()) {
+            Block block = it.next();
+
+            boolean overlap =
+                    block.rect.getX() < bossX + bossW &&
+                            block.rect.getX() + block.rect.getWidth() > bossX &&
+                            block.rect.getY() < bossY + bossH &&
+                            block.rect.getY() + block.rect.getHeight() > bossY;
+
+            if (overlap) {
+                block.remove();
+                it.remove();
+            }
+        }
+    }
+
+    private void spawnBoss() {
+        double bossX = GameConfig.PLAYFIELD_MIN_X + GameConfig.BLOCK_SIZE * 2;
+        double bossY = GameConfig.PLAYFIELD_MIN_Y + GameConfig.BLOCK_SIZE;
+        double bossW = GameConfig.BLOCK_SIZE * 4;
+        double bossH = GameConfig.BLOCK_SIZE * 4;
+
+        removeBlocksInBossArea(bossX, bossY, bossW, bossH);
+        int bossType = random.nextInt(3);
+
+        int baseHealth = getCurrentWaveBlockHealth();
+
+        int bossHealth;
+
+        if (bossType == 0) {
+            bossHealth = (int) (
+                    baseHealth * GameConfig.BOSS_HP_MULTIPLIER_MIN
+            );
+        } else if (bossType == 1) {
+            bossHealth = (int) (
+                    baseHealth * GameConfig.BOSS_HP_MULTIPLIER_MID
+            );
+        } else {
+            bossHealth = (int) (
+                    baseHealth * GameConfig.BOSS_HP_MULTIPLIER_MAX
+            );
+        }
+
+        bossX = GameConfig.PLAYFIELD_MIN_X
+                + GameConfig.BLOCK_SIZE * 2;
+
+        bossY = GameConfig.PLAYFIELD_MIN_Y
+                + GameConfig.BLOCK_SIZE;
+
+        Block boss = new Block(
+                bossX,
+                bossY,
+                bossHealth,
+                BlockType.BOSS,
+                root
+        );
+
+        blocks.add(boss);
+    }
+
+
     private void spawnRow() {
+
+        if (wave % GameConfig.BOSS_INTERVAL == 0) {
+            spawnBoss();
+            return;
+        }
+
         int columns = 8;
         boolean specialSpawned = false;
 
         int blockHealth;
 
-        if (wave <= 10) {
-            blockHealth = wave;
-        } else {
-            blockHealth = (int) Math.round(10 * Math.pow(1.3, wave - 10));
-        }
+        blockHealth = getCurrentWaveBlockHealth();
 
         for (int i = 0; i < columns; i++) {
             if (random.nextDouble() > 0.4) {

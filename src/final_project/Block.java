@@ -8,11 +8,17 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.scene.effect.DropShadow;
+import javafx.scene.text.TextBoundsType;
+import javafx.application.Platform;
+import javafx.scene.control.Label;
+import javafx.scene.layout.StackPane;
 
 
 public class Block {
     Rectangle rect;
     Text text;
+    public StackPane bossPane;
+    public Label bossLabel;
     Circle ring;
     int health;
     BlockType type;
@@ -34,7 +40,7 @@ public class Block {
         rect.setEffect(new DropShadow(8, Color.BLACK));
 
         text = new Text();
-        text.setFont(Font.font("Arial", FontWeight.BOLD, 22));
+        text.setFont(Font.font("Impact", FontWeight.BOLD, 22));
 
         if (type == BlockType.EXTRA_BALL) {
             ring = new Circle(x + GameConfig.BLOCK_SIZE / 2, y + GameConfig.BLOCK_SIZE / 2, GameConfig.BLOCK_SIZE / 2 - 8);
@@ -106,11 +112,47 @@ public class Block {
             text.setX(rect.getX() + (rect.getWidth() - text.getLayoutBounds().getWidth()) / 2);
 
             root.getChildren().addAll(rect, ring, text);
+        } else if (type == BlockType.BOSS) {
+
+            rect.setWidth(GameConfig.BLOCK_SIZE * 4 - 4);
+            rect.setHeight(GameConfig.BLOCK_SIZE * 4 - 4);
+
+            rect.setFill(Color.web("#66BB6A"));
+            rect.setStroke(Color.web("#C8E6C9"));
+            rect.setStrokeWidth(6);
+
+            bossLabel = new Label(
+                    health + "\n=w="
+            );
+
+            bossLabel.setStyle(
+                    "-fx-text-fill: white;" +
+                            "-fx-font-size: 42;" +
+                            "-fx-font-family: 'Impact';"
+            );
+
+            bossPane = new StackPane();
+
+            bossPane.setLayoutX(rect.getX());
+            bossPane.setLayoutY(rect.getY());
+
+            bossPane.setPrefSize(
+                    rect.getWidth(),
+                    rect.getHeight()
+            );
+
+            bossPane.getChildren().add(bossLabel);
+
+            root.getChildren().addAll(
+                    rect,
+                    bossPane
+            );
         } else {
             text.setFill(Color.WHITE);
             updateVisuals();
             root.getChildren().addAll(rect, text);
         }
+
 
         text.setY(y + (GameConfig.BLOCK_SIZE + text.getLayoutBounds().getHeight() / 2) / 2 - 2);
     }
@@ -164,6 +206,22 @@ public class Block {
             rect.setFill(Color.PINK);
             return;
         }
+        if (type == BlockType.BOSS) {
+
+            bossLabel.setText(
+                    health + "\n=w="
+            );
+
+            bossPane.setLayoutX(rect.getX());
+            bossPane.setLayoutY(rect.getY());
+
+            bossPane.setPrefSize(
+                    rect.getWidth(),
+                    rect.getHeight()
+            );
+
+            return;
+        }
 
         text.setText(String.valueOf(health));
         text.setX(rect.getX() + (rect.getWidth() - text.getLayoutBounds().getWidth()) / 2);
@@ -195,6 +253,11 @@ public class Block {
         if (ring != null) {
             ring.setCenterY(ring.getCenterY() + GameConfig.BLOCK_SIZE);
         }
+
+        if (bossPane != null) {
+            bossPane.setLayoutY(rect.getY());
+        }
+        updateVisuals();
     }
 
     public void remove() {
