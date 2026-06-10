@@ -691,7 +691,11 @@ public class GameController {
             Block block = it.next();
 
             if (isIntersecting(b.circle, block.rect)) {
-                soundManager.playHit();
+
+                if (!b.pierceBall) {
+                    soundManager.playHit();
+                }
+                
 
                 if (!b.pierceBall) {
                     bounceFromBlock(b, block);
@@ -773,8 +777,9 @@ public class GameController {
             double dy = blockY - centerY;
             double distance = Math.sqrt(dx * dx + dy * dy);
 
-            if (distance <= GameConfig.FIRE_EXPLOSION_RADIUS) {
+            if (distance <= GameConfig.FIRE_EXPLOSION_RADIUS && !block.burning && !block.invincible) {
                 block.setBurning(true);
+                soundManager.playBurn();
             }
         }
     }
@@ -791,8 +796,9 @@ public class GameController {
             double dy = blockY - centerY;
             double distance = Math.sqrt(dx * dx + dy * dy);
 
-            if (distance <= GameConfig.ICE_EXPLOSION_RADIUS) {
+            if (distance <= GameConfig.ICE_EXPLOSION_RADIUS && !block.frozen && !block.invincible) {
                 block.setFrozen(true);
+                soundManager.playFreeze();
             }
         }
     }
@@ -1237,7 +1243,7 @@ public class GameController {
         double bossH = GameConfig.BLOCK_SIZE * 4;
 
         removeBlocksInBossArea(bossX, bossY, bossW, bossH);
-        int bossType = 1;//random.nextInt(3);
+        int bossType = random.nextInt(2);
 
         int baseHealth = getCurrentWaveBlockHealth();
 
@@ -1368,13 +1374,6 @@ public class GameController {
             waveText.setText("Wave: " + wave);
         }
 
-        int targetBallCount = Math.max(1, totalBalls - 1);
-        totalBalls = targetBallCount;
-
-        while (balls.size() > totalBalls) {
-            Ball removed = balls.remove(balls.size() - 1);
-            root.getChildren().remove(removed.circle);
-        }
 
         updateRemainingBallsUI();
         updateShopUI();

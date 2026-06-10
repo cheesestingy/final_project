@@ -32,7 +32,7 @@ public class GameConfig {
     public static final double BOSS_HP_MULTIPLIER_MID = 30.0;
     public static final double BOSS_HP_MULTIPLIER_MAX = 40.0;
 
-    
+
 
     public static final double WARNING_LINE_Y = PLAYFIELD_MAX_Y - BLOCK_SIZE - 20;
 
@@ -45,12 +45,12 @@ public class GameConfig {
 
     public static final double SHRINK_BALL_SIZE = 0.3;
 
-    public static final double BALL_DAMAGE_COST_MULTIPLIER = 1.05;
+    public static final double BALL_DAMAGE_COST_MULTIPLIER = 1.2;
     public static final double POWER_UP_COST_MULTIPLIER = 1.45;
     public static final double COIN_REWARD_COST_MULTIPLIER = 1.4;
 
     public static final int BALL_DAMAGE_START = 1;
-    public static final double BALL_DAMAGE_UPGRADE_MULTIPLIER = 1.07;
+    public static final double BALL_DAMAGE_UPGRADE_MULTIPLIER = 1.05;
     public static final int BALL_DAMAGE_MAX = 67676767;
 
     public static final int BALL_DAMAGE_UPGRADE_COST_START = 25;

@@ -12,6 +12,8 @@ public class SoundManager {
     private final AudioClip shootSound;
     private final AudioClip gameOverSound;
     private final AudioClip buySound;
+    private final AudioClip burnSound;
+    private final AudioClip freezeSound;
     private MediaPlayer backgroundPlayer;
 
     public SoundManager() {
@@ -20,6 +22,8 @@ public class SoundManager {
         powerupSound = loadSound("sound/powerup.wav");
         shootSound = loadSound("sound/shoot.wav");
         buySound = loadSound("sound/buy.wav");
+        burnSound = loadSound("sound/burn.wav");
+        freezeSound = loadSound("sound/freeze.wav");
         gameOverSound = loadSound("sound/gameover.wav");
         setupBackgroundMusic();
     }
@@ -69,5 +73,13 @@ public class SoundManager {
         if (backgroundPlayer != null) {
             backgroundPlayer.stop();
         }
+    }
+
+    public void playBurn() {
+        burnSound.play();
+    }
+
+    public void playFreeze() {
+        freezeSound.play();
     }
 }
