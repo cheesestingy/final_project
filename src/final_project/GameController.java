@@ -59,6 +59,7 @@ public class GameController {
 
     private List<Ball> balls = new ArrayList<>();
     private List<Block> blocks = new ArrayList<>();
+    private List<Block> pendingBlocksToAdd = new ArrayList<>();
 
     private int wave = 1;
     private int highestWave = 1;
@@ -691,15 +692,25 @@ public class GameController {
 
             if (isIntersecting(b.circle, block.rect)) {
                 soundManager.playHit();
+
                 if (!b.pierceBall) {
                     bounceFromBlock(b, block);
                 }
-                if (!b.pierceBall || b.canPierceDamage(block)) {
-                    block.health -= ballDamage;
+
+                if (!block.invincible) {
+                    if (!b.pierceBall || b.canPierceDamage(block)) {
+                        block.health -= ballDamage;
+                    }
                 }
+
                 boolean destroyed = block.health <= 0;
 
                 if (destroyed) {
+                    if (block.type == BlockType.BOSS && !block.alreadySplit) {
+                        block.alreadySplit = true;
+                        splitBoss(block);
+                    }
+
                     soundManager.playDestroy();
                     handleBlockDestroyed(block);
                     block.remove();
@@ -708,18 +719,25 @@ public class GameController {
                     block.updateVisuals();
                 }
 
-                if (b.fireBall) {
-                    fireExplosion(block);
-                }
+                if (!block.invincible) {
+                    if (b.fireBall) {
+                        fireExplosion(block);
+                    }
 
-                if (b.iceBall) {
-                    iceExplosion(block);
+                    if (b.iceBall) {
+                        iceExplosion(block);
+                    }
                 }
 
                 if (!b.pierceBall) {
                     break;
                 }
             }
+        }
+
+        if (!pendingBlocksToAdd.isEmpty()) {
+            blocks.addAll(pendingBlocksToAdd);
+            pendingBlocksToAdd.clear();
         }
     }
 
@@ -805,17 +823,22 @@ public class GameController {
         if (block.type == BlockType.EXTRA_BALL) {
             extraBallsEarned++;
             soundManager.playPowerup();
+
         } else if (block.type == BlockType.FIRE_POWER) {
             fireRoundsAvailable++;
             soundManager.playPowerup();
+
         } else if (block.type == BlockType.ICE_POWER) {
             iceRoundsAvailable++;
             soundManager.playPowerup();
+
         } else if (block.type == BlockType.PIERCE_POWER) {
             pierceRoundsAvailable++;
             soundManager.playPowerup();
-        }  else if (block.type == BlockType.SHRINK_POWER) {
+
+        } else if (block.type == BlockType.SHRINK_POWER) {
             shrinkRoundsAvailable++;
+            soundManager.playPowerup();
         }
 
         updateShopUI();
@@ -842,27 +865,31 @@ public class GameController {
     private void moveBlocksDownWithFreeze() {
         List<Block> sortedBlocks = new ArrayList<>(blocks);
 
+        // 從下面的方塊先處理，避免上面的方塊先移動穿過下面方塊
         sortedBlocks.sort((a, b) -> Double.compare(b.rect.getY(), a.rect.getY()));
 
         for (Block block : sortedBlocks) {
-            if (block.frozen) {
+            if (block.frozen || block.invincible) {
                 continue;
             }
 
+            double nextX = block.rect.getX();
             double nextY = block.rect.getY() + GameConfig.BLOCK_SIZE;
+            double nextW = block.rect.getWidth();
+            double nextH = block.rect.getHeight();
 
             boolean blocked = false;
 
             for (Block other : blocks) {
                 if (other == block) continue;
 
-                boolean sameColumn =
-                        Math.abs(other.rect.getX() - block.rect.getX()) < 1;
+                boolean overlap =
+                        nextX < other.rect.getX() + other.rect.getWidth()
+                                && nextX + nextW > other.rect.getX()
+                                && nextY < other.rect.getY() + other.rect.getHeight()
+                                && nextY + nextH > other.rect.getY();
 
-                boolean targetOccupied =
-                        Math.abs(other.rect.getY() - nextY) < 1;
-
-                if (sameColumn && targetOccupied) {
+                if (overlap) {
                     blocked = true;
                     break;
                 }
@@ -879,10 +906,166 @@ public class GameController {
             }
         }
     }
+    private boolean isBlockAreaOccupied(double x, double y, double w, double h) {
+        for (Block block : blocks) {
+            boolean overlap =
+                    block.rect.getX() < x + w &&
+                            block.rect.getX() + block.rect.getWidth() > x &&
+                            block.rect.getY() < y + h &&
+                            block.rect.getY() + block.rect.getHeight() > y;
+
+            if (overlap) {
+                return true;
+            }
+        }
+
+        for (Block block : pendingBlocksToAdd) {
+            boolean overlap =
+                    block.rect.getX() < x + w &&
+                            block.rect.getX() + block.rect.getWidth() > x &&
+                            block.rect.getY() < y + h &&
+                            block.rect.getY() + block.rect.getHeight() > y;
+
+            if (overlap) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void splitBoss(Block boss) {
+        if (boss.bossType != 0) return;
+
+        int splitHp = Math.max(
+                1,
+                (int) (boss.maxHealth * GameConfig.BOSS1_SPLIT_HP_RATIO)
+        );
+
+        int created = 0;
+        int attempts = 0;
+
+        while (created < GameConfig.BOSS1_SPLIT_COUNT && attempts < 100) {
+            attempts++;
+
+            int maxCol = 8;
+            int randomCol = random.nextInt(maxCol);
+
+            double x = GameConfig.PLAYFIELD_MIN_X + randomCol * GameConfig.BLOCK_SIZE;
+            double y = boss.rect.getY() + random.nextInt(4) * GameConfig.BLOCK_SIZE;
+
+            double w = GameConfig.BLOCK_SIZE - 4;
+            double h = GameConfig.BLOCK_SIZE - 4;
+
+            if (isBlockAreaOccupied(x + 2, y + 2, w, h)) {
+                continue;
+            }
+
+            Block miniBoss = new Block(
+                    x,
+                    y,
+                    splitHp,
+                    BlockType.NORMAL,
+                    -1,
+                    root
+            );
+
+            miniBoss.rect.setFill(Color.web("#7CFC00"));
+            miniBoss.rect.setStroke(Color.web("#C8E6C9"));
+            miniBoss.rect.setStrokeWidth(3);
+
+            pendingBlocksToAdd.add(miniBoss);
+            created++;
+        }
+    }
+
+    private void boss2StoneSkill() {
+
+        boolean boss2Exists = false;
+
+        for (Block block : blocks) {
+
+            if (block.type == BlockType.BOSS
+                    && block.bossType == 1) {
+
+                boss2Exists = true;
+                break;
+            }
+
+        }
+
+        if (!boss2Exists) {
+            return;
+        }
+
+        // 清除上一回合的石化
+
+        for (Block block : blocks) {
+            if (block.invincible) {
+                block.invincible = false;
+
+                block.burning = false;
+                block.frozen = false;
+
+                block.updateVisuals();
+            }
+        }
+
+        List<Block> candidates = new ArrayList<>();
+
+        for (Block block : blocks) {
+
+            if (block.type == BlockType.BOSS)
+                continue;
+
+            if (block.type != BlockType.NORMAL)
+                continue;
+
+            if (block.invincible)
+                continue;
+
+            candidates.add(block);
+        }
+
+        for (int i = 0;
+             i < GameConfig.BOSS2_STONE_COUNT
+                     && !candidates.isEmpty();
+             i++) {
+
+            int index =
+                    random.nextInt(candidates.size());
+
+            Block chosen =
+                    candidates.remove(index);
+
+            chosen.burning = false;
+            chosen.frozen = false;
+
+            chosen.invincible = true;
+            chosen.updateVisuals();
+        }
+    }
+
+    private void updateTemporaryInvincibleBlocks() {
+        for (Block block : blocks) {
+
+            if (!block.invincible) continue;
+
+            block.invincibleTurns--;
+
+            if (block.invincibleTurns <= 0) {
+                block.invincible = false;
+                block.updateVisuals();
+            }
+        }
+    }
 
     private void endWave() {
         applyBurnDamage();
 
+        updateTemporaryInvincibleBlocks();
+
+        boss2StoneSkill();
         startX = nextStartX;
         wave++;
         fireRoundActive = false;
@@ -916,7 +1099,9 @@ public class GameController {
         if (isGameOver) {
             triggerGameOver();
         } else {
-            if (canSpawnNewRow()) {
+            if (wave % GameConfig.BOSS_INTERVAL == 0) {
+                spawnBoss();
+            } else if (canSpawnNewRow()) {
                 spawnRow();
             }
 
@@ -996,8 +1181,15 @@ public class GameController {
     }
 
     private boolean canSpawnNewRow() {
+        double spawnY = GameConfig.PLAYFIELD_MIN_Y + GameConfig.BLOCK_SIZE;
+
         for (Block block : blocks) {
-            if (block.rect.getY() <= GameConfig.PLAYFIELD_MIN_Y + GameConfig.BLOCK_SIZE + 1) {
+
+            boolean touchesSpawnRow =
+                    block.rect.getY() < spawnY + GameConfig.BLOCK_SIZE &&
+                            block.rect.getY() + block.rect.getHeight() > spawnY;
+
+            if (touchesSpawnRow) {
                 return false;
             }
         }
@@ -1045,7 +1237,7 @@ public class GameController {
         double bossH = GameConfig.BLOCK_SIZE * 4;
 
         removeBlocksInBossArea(bossX, bossY, bossW, bossH);
-        int bossType = random.nextInt(3);
+        int bossType = 1;//random.nextInt(3);
 
         int baseHealth = getCurrentWaveBlockHealth();
 
@@ -1076,6 +1268,7 @@ public class GameController {
                 bossY,
                 bossHealth,
                 BlockType.BOSS,
+                bossType,
                 root
         );
 
@@ -1085,10 +1278,7 @@ public class GameController {
 
     private void spawnRow() {
 
-        if (wave % GameConfig.BOSS_INTERVAL == 0) {
-            spawnBoss();
-            return;
-        }
+
 
         int columns = 8;
         boolean specialSpawned = false;

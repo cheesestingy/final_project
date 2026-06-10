@@ -19,13 +19,20 @@ public class GameConfig {
     public static final int BALL_RADIUS = 11;
     public static final double BALL_SPEED = 8.0;
 
-    public static final int BOSS_INTERVAL = 5;
-    public static final double BOSS_HEALTH_MULTIPLIER = 20.0;
+    public static final int BOSS_INTERVAL = 10;
+    // Boss1 分裂數量
+    public static final int BOSS1_SPLIT_COUNT = 6;
+
+    // 小Boss血量倍率
+    public static final double BOSS1_SPLIT_HP_RATIO = 0.2;
+
+    public static final int BOSS2_STONE_COUNT = 3;
 
     public static final double BOSS_HP_MULTIPLIER_MIN = 20.0;
     public static final double BOSS_HP_MULTIPLIER_MID = 30.0;
     public static final double BOSS_HP_MULTIPLIER_MAX = 40.0;
-    public static final int BOSS_WIDTH_BLOCKS = 4;
+
+    
 
     public static final double WARNING_LINE_Y = PLAYFIELD_MAX_Y - BLOCK_SIZE - 20;
 
@@ -38,15 +45,15 @@ public class GameConfig {
 
     public static final double SHRINK_BALL_SIZE = 0.3;
 
-    public static final double BALL_DAMAGE_COST_MULTIPLIER = 1.35;
+    public static final double BALL_DAMAGE_COST_MULTIPLIER = 1.05;
     public static final double POWER_UP_COST_MULTIPLIER = 1.45;
     public static final double COIN_REWARD_COST_MULTIPLIER = 1.4;
 
     public static final int BALL_DAMAGE_START = 1;
-    public static final double BALL_DAMAGE_UPGRADE_MULTIPLIER = 1.05;
+    public static final double BALL_DAMAGE_UPGRADE_MULTIPLIER = 1.07;
     public static final int BALL_DAMAGE_MAX = 67676767;
 
-    public static final int BALL_DAMAGE_UPGRADE_COST_START = 50;
+    public static final int BALL_DAMAGE_UPGRADE_COST_START = 25;
 
 
     public static final double POWER_UP_SPAWN_CHANCE_START = 0.2;
