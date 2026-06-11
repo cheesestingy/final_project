@@ -477,7 +477,7 @@ public class GameController {
         if (state == GameState.AIMING && aimPath.isVisible()) {
             aimPath.setVisible(false);
 
-            if (aimVy < -1.0) {
+            if (aimVy < 0) {
                 soundManager.playShoot();
                 state = GameState.SHOOTING;
                 ballsFired = 0;
@@ -523,67 +523,84 @@ public class GameController {
     private void updateAim(double mx, double my) {
         double dx = mx - startX;
         double dy = my - startY;
+
+        if (dy >= 0) {
+            aimPath.setVisible(false);
+            return;
+        }
+
         double length = Math.sqrt(dx * dx + dy * dy);
+        if (length == 0) return;
 
-        if (length > 0) {
-            aimVx = -(dx / length) * GameConfig.BALL_SPEED;
-            aimVy = -(dy / length) * GameConfig.BALL_SPEED;
+        double dirX = dx / length;
+        double dirY = dy / length;
 
-            aimPath.getPoints().clear();
-            aimPath.getPoints().addAll(startX, startY);
+        if (dirY > -0.15) {
+            dirY = -0.15;
+            double newLen = Math.sqrt(dirX * dirX + dirY * dirY);
+            dirX /= newLen;
+            dirY /= newLen;
+        }
 
-            double simX = startX;
-            double simY = startY;
-            double dirX = -(dx / length);
-            double dirY = -(dy / length);
+        aimVx = dirX * GameConfig.BALL_SPEED;
+        aimVy = dirY * GameConfig.BALL_SPEED;
 
-            Circle dummy = new Circle(0, 0, GameConfig.BALL_RADIUS);
-            double stepLength = 2.0;
-            int maxSteps = 400;
+        aimPath.setVisible(true);
+        aimPath.getPoints().clear();
+        aimPath.getPoints().addAll(startX, startY);
 
-            for (int i = 0; i < maxSteps; i++) {
-                simX += dirX * stepLength;
-                simY += dirY * stepLength;
+        double simX = startX;
+        double simY = startY;
 
-                dummy.setCenterX(simX);
-                dummy.setCenterY(simY);
+        double stepLength = 5.0;
+        int maxSteps = 400;
 
-                boolean bounced = false;
+        Circle dummy = new Circle(0, 0, GameConfig.BALL_RADIUS);
+        boolean isPiercing = pierceRoundActive || forcePierceRound;
 
-                if (simX - GameConfig.BALL_RADIUS <= GameConfig.PLAYFIELD_MIN_X) {
-                    simX = GameConfig.PLAYFIELD_MIN_X + GameConfig.BALL_RADIUS;
-                    dirX = -dirX;
-                    bounced = true;
-                } else if (simX + GameConfig.BALL_RADIUS >= GameConfig.PLAYFIELD_MAX_X) {
-                    simX = GameConfig.PLAYFIELD_MAX_X - GameConfig.BALL_RADIUS;
-                    dirX = -dirX;
-                    bounced = true;
-                }
+        for (int i = 0; i < maxSteps; i++) {
+            simX += dirX * stepLength;
+            simY += dirY * stepLength;
+            dummy.setCenterX(simX);
+            dummy.setCenterY(simY);
 
-                if (simY - GameConfig.BALL_RADIUS <= GameConfig.PLAYFIELD_MIN_Y) {
-                    simY = GameConfig.PLAYFIELD_MIN_Y + GameConfig.BALL_RADIUS;
-                    dirY = -dirY;
-                    bounced = true;
-                }
+            boolean bounced = false;
 
-                if (bounced) {
-                    aimPath.getPoints().addAll(simX, simY);
-                }
+            if (simX - GameConfig.BALL_RADIUS <= GameConfig.PLAYFIELD_MIN_X) { // walls
+                simX = GameConfig.PLAYFIELD_MIN_X + GameConfig.BALL_RADIUS;
+                dirX = -dirX;
+                bounced = true;
+            } else if (simX + GameConfig.BALL_RADIUS >= GameConfig.PLAYFIELD_MAX_X) {
+                simX = GameConfig.PLAYFIELD_MAX_X - GameConfig.BALL_RADIUS;
+                dirX = -dirX;
+                bounced = true;
+            }
 
-                if (simY + GameConfig.BALL_RADIUS >= GameConfig.PLAYFIELD_MAX_Y) {
-                    aimPath.getPoints().addAll(simX, simY);
+            if (simY - GameConfig.BALL_RADIUS <= GameConfig.PLAYFIELD_MIN_Y) { // hit ceiling
+                simY = GameConfig.PLAYFIELD_MIN_Y + GameConfig.BALL_RADIUS;
+                dirY = -dirY;
+                bounced = true;
+            }
+
+            if (bounced) {
+                aimPath.getPoints().addAll(simX, simY);
+            }
+
+            if (simY + GameConfig.BALL_RADIUS >= GameConfig.PLAYFIELD_MAX_Y) { // hit ground
+                aimPath.getPoints().addAll(simX, simY);
+                break;
+            }
+
+            boolean hitBlock = false;
+            for (Block block : blocks) {
+                if (isIntersecting(dummy, block.rect)) {
+                    hitBlock = true;
                     break;
                 }
+            }
 
-                boolean hitBlock = false;
-                for (Block block : blocks) {
-                    if (isIntersecting(dummy, block.rect)) {
-                        hitBlock = true;
-                        break;
-                    }
-                }
-
-                if (hitBlock) {
+            if (hitBlock) {
+                if (!isPiercing) { // if piercing, aim line goes thru block
                     aimPath.getPoints().addAll(simX, simY);
                     break;
                 }
