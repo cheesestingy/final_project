@@ -11,6 +11,8 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 
+import static final_project.GameController.formatBigNumber;
+
 public class Block {
     Rectangle rect;
     Text text;
@@ -194,7 +196,7 @@ public class Block {
     public void updateVisuals() {
         if (type == BlockType.BOSS) {
             if (bossLabel != null) {
-                bossLabel.setText(health + "\n0w0");
+                bossLabel.setText(formatBigNumber(health) + "\n0w0");
             }
 
             if (bossPane != null) {
@@ -267,7 +269,7 @@ public class Block {
 
             return;
         }
-        text.setText(String.valueOf(health));
+        text.setText(formatBigNumber(health));
         text.setFill(Color.WHITE);
         text.setX(rect.getX() + (rect.getWidth() - text.getLayoutBounds().getWidth()) / 2);
 

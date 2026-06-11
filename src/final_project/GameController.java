@@ -342,13 +342,13 @@ public class GameController {
     }
 
     private void updateShopUI() {
-        moneyText.setText("Money: $" + money);
+        moneyText.setText("Money: $" + formatBigNumber(money));
 
         // 攻擊升級
         upgradeDamageBtn.setText(
                 "Ball Damage +\n" +
-                        "Cost: $" + damageUpgradeCost + "\n" +
-                        "Current: " + ballDamage
+                        "Cost: $" + formatBigNumber(damageUpgradeCost) + "\n" +
+                        "Current: " + formatBigNumber(ballDamage)
         );
 
         boolean damageMaxed = ballDamage >= GameConfig.BALL_DAMAGE_MAX;
@@ -359,7 +359,7 @@ public class GameController {
             upgradeDamageBtn.setText(
                     "Ball Damage\n" +
                             "MAX\n" +
-                            "Current: " + ballDamage
+                            "Current: " + formatBigNumber(ballDamage)
             );
         }
 
@@ -368,7 +368,7 @@ public class GameController {
 
         upgradePowerUpBtn.setText(
                 "Power Up Rate +\n" +
-                        "Cost: $" + powerUpUpgradeCost + "\n" +
+                        "Cost: $" + formatBigNumber(powerUpUpgradeCost) + "\n" +
                         "Current: " + percent + "%"
         );
 
@@ -387,7 +387,7 @@ public class GameController {
         // 金幣倍率升級
         upgradeCoinRewardBtn.setText(
                 "Coin Bonus +\n" +
-                        "Cost: $" + coinRewardUpgradeCost + "\n" +
+                        "Cost: $" + formatBigNumber(coinRewardUpgradeCost) + "\n" +
                         "Current: x" + String.format("%.1f", coinRewardMultiplier)
         );
 
@@ -1418,5 +1418,15 @@ public class GameController {
         endWave();
     }
 
+    // Add these suffixes near the top of your GameController with your other variables
+    private static final String[] SUFFIXES = {"", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc"};
 
+    public static String formatBigNumber(int number) {
+        if (number < 1000) return "" + number;
+
+        int exponent = (int) (Math.log10(number) / 3);
+
+        double displayNum = number / Math.pow(1000, exponent);
+        return String.format("%.2f%s", displayNum, SUFFIXES[exponent]);
+    }
 }
