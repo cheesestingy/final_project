@@ -774,13 +774,32 @@ public class GameController {
         double dx = ballX - blockCenterX;
         double dy = ballY - blockCenterY;
 
-        double overlapX = block.rect.getWidth() / 2.0 + b.circle.getRadius() - Math.abs(dx);
-        double overlapY = block.rect.getHeight() / 2.0 + b.circle.getRadius() - Math.abs(dy);
+        // tunneling: ball overlaps with block is why it glitches
+        // fix: teleport ball outside block and then change direction
+
+        double overlapX = (block.rect.getWidth() / 2.0 + b.circle.getRadius()) - Math.abs(dx);
+        double overlapY = (block.rect.getHeight() / 2.0 + b.circle.getRadius()) - Math.abs(dy);
 
         if (overlapX < overlapY) {
-            b.vx = -b.vx;
+            if (dx > 0) {
+                // right
+                b.circle.setCenterX(ballX + overlapX);
+                b.vx = Math.abs(b.vx);
+            } else {
+                // left
+                b.circle.setCenterX(ballX - overlapX);
+                b.vx = -Math.abs(b.vx);
+            }
         } else {
-            b.vy = -b.vy;
+            if (dy > 0) {
+                // top
+                b.circle.setCenterY(ballY + overlapY);
+                b.vy = Math.abs(b.vy);
+            } else {
+                // bottom
+                b.circle.setCenterY(ballY - overlapY);
+                b.vy = -Math.abs(b.vy);
+            }
         }
     }
 
