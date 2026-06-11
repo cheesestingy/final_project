@@ -178,7 +178,7 @@ public class GameController {
         root.setFocusTraversable(true);
         root.setOnMouseClicked(e -> root.requestFocus());
 
-        editModeManager = new EditModeManager(this, editModeText);
+        editModeManager = new EditModeManager(this, editModeText, root);
         editModeManager.attach(scene);
     }
 

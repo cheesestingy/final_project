@@ -4,6 +4,14 @@ import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.text.Text;
+import javafx.scene.layout.Pane;
+import javafx.scene.media.Media;
+import javafx.scene.media.MediaPlayer;
+import javafx.scene.media.MediaView;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 public class EditModeManager {
 
@@ -11,42 +19,62 @@ public class EditModeManager {
     private int ballTypeIndex = 0;
 
     private final String[] ballTypes = {
-            "NORMAL",
-            "FIRE",
-            "ICE",
-            "PIERCE",
-            "SHRINK"
+            "NORMAL", "FIRE", "ICE", "PIERCE", "SHRINK"
     };
 
     private GameController game;
     private Text editText;
+    private Pane root;
 
-    public EditModeManager(GameController game, Text editText) {
+    // --- Video Player Variables ---
+    private MediaView mediaView;
+    private MediaPlayer mediaPlayer;
+
+    // --- Konami Code Logic ---
+    private final List<KeyCode> KONAMI_CODE = Arrays.asList(
+            KeyCode.UP, KeyCode.UP, KeyCode.DOWN, KeyCode.DOWN,
+            KeyCode.LEFT, KeyCode.RIGHT, KeyCode.LEFT, KeyCode.RIGHT,
+            KeyCode.A, KeyCode.B
+    );
+    private List<KeyCode> inputQueue = new ArrayList<>();
+
+    public EditModeManager(GameController game, Text editText, Pane root) {
         this.game = game;
         this.editText = editText;
+        this.root = root; // Save the root pane so we can attach the video
         updateText();
     }
 
     public void attach(Scene scene) {
         scene.addEventFilter(KeyEvent.KEY_RELEASED, e -> {
 
-            if (e.getCode() == KeyCode.E) {
-                editMode = !editMode;
+            if (!editMode) {
+                // 1. Add the pressed key to our tracker
+                inputQueue.add(e.getCode());
 
-                if (editMode) {
-                    applyBallType();
-                } else {
-                    game.setForceFireRound(false);
-                    game.setForceIceRound(false);
+                // 2. If we have tracked more than 10 keys, forget the oldest one
+                if (inputQueue.size() > KONAMI_CODE.size()) {
+                    inputQueue.remove(0);
                 }
 
-                updateText();
+                // 3. Check if the tracked keys perfectly match the Konami Code
+                if (inputQueue.equals(KONAMI_CODE)) {
+                    enableEditMode();
+                    inputQueue.clear(); // Reset the queue so it doesn't trigger twice
+                }
+                return; // Ignore all other keys if Edit Mode is OFF
+            }
+
+            // --- IF WE ARE ALREADY IN EDIT MODE ---
+
+            // Exit Edit Mode with 'E'
+            if (e.getCode() == KeyCode.E) {
+                disableEditMode();
                 e.consume();
                 return;
             }
 
-            if (!editMode) return;
-
+            // Existing Controls
             if (e.getCode() == KeyCode.LEFT) {
                 ballTypeIndex--;
                 if (ballTypeIndex < 0) {
@@ -55,9 +83,7 @@ public class EditModeManager {
                 applyBallType();
                 updateText();
                 e.consume();
-            }
-
-            if (e.getCode() == KeyCode.RIGHT) {
+            } else if (e.getCode() == KeyCode.RIGHT) {
                 ballTypeIndex++;
                 if (ballTypeIndex >= ballTypes.length) {
                     ballTypeIndex = 0;
@@ -65,18 +91,62 @@ public class EditModeManager {
                 applyBallType();
                 updateText();
                 e.consume();
-            }
-
-            if (e.getCode() == KeyCode.UP) {
+            } else if (e.getCode() == KeyCode.UP) {
                 game.moveBlocksUpOneRow();
                 e.consume();
-            }
-
-            if (e.getCode() == KeyCode.DOWN) {
+            } else if (e.getCode() == KeyCode.DOWN) {
                 game.forceNextWave();
                 e.consume();
             }
         });
+    }
+
+    private void enableEditMode() {
+        editMode = true;
+        applyBallType();
+        updateText();
+        playSecretVideo(); // Start the MP4
+    }
+
+    private void disableEditMode() {
+        editMode = false;
+
+        game.setForceFireRound(false);
+        game.setForceIceRound(false);
+        game.setForcePierceRound(false);
+        game.setForceShrinkRound(false);
+
+        editText.setVisible(false);
+    }
+
+    private void playSecretVideo() {
+        try {
+            String videoUrl = getClass().getResource("sound/SECRET.mp4").toExternalForm();
+            Media media = new Media(videoUrl);
+            mediaPlayer = new MediaPlayer(media);
+            mediaView = new MediaView(mediaPlayer);
+            mediaView.setFitWidth(GameConfig.WINDOW_WIDTH); // dwayne the rock johnson
+            mediaView.setFitHeight(GameConfig.WINDOW_HEIGHT);
+            mediaView.setPreserveRatio(false);
+            root.getChildren().add(mediaView);
+            mediaView.toFront();
+            editText.toFront();
+            mediaPlayer.setCycleCount(1);
+            mediaPlayer.setOnEndOfMedia(this::stopSecretVideo);
+            mediaPlayer.play();
+
+        } catch (Exception ex) {
+            System.out.println("DAMN");
+        }
+    }
+
+    private void stopSecretVideo() {
+        if (mediaPlayer != null) {
+            mediaPlayer.stop();
+            root.getChildren().remove(mediaView); // Remove it from the screen
+            mediaPlayer = null;
+            mediaView = null;
+        }
     }
 
     private void applyBallType() {
@@ -119,11 +189,8 @@ public class EditModeManager {
                             "← → Change Ball\n" +
                             "↑ Move Blocks Up\n" +
                             "↓ Next Wave\n" +
-                            "E Exit Edit"
+                            "Press 'E' to Exit"
             );
-        } else {
-            editText.setVisible(false);
         }
     }
-
 }
