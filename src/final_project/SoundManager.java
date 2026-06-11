@@ -15,6 +15,8 @@ public class SoundManager {
     private final AudioClip burnSound;
     private final AudioClip freezeSound;
     private MediaPlayer backgroundPlayer;
+    private double currentVolume = 0.25;
+    private double sfxVolume = 1.0;
 
     public SoundManager() {
         hitSound = loadSound("sound/hit.wav");
@@ -26,6 +28,7 @@ public class SoundManager {
         freezeSound = loadSound("sound/freeze.wav");
         gameOverSound = loadSound("sound/gameover.wav");
         setupBackgroundMusic();
+        setSfxVolume(1.0);
     }
 
     private AudioClip loadSound(String path) {
@@ -61,7 +64,7 @@ public class SoundManager {
 
         backgroundPlayer = new MediaPlayer(media);
         backgroundPlayer.setCycleCount(MediaPlayer.INDEFINITE);
-        backgroundPlayer.setVolume(0.25);
+        backgroundPlayer.setVolume(currentVolume);
     }
     public void playBackgroundMusic() {
         if (backgroundPlayer != null) {
@@ -73,6 +76,35 @@ public class SoundManager {
         if (backgroundPlayer != null) {
             backgroundPlayer.stop();
         }
+    }
+
+    public void setVolume(double volume) {
+        this.currentVolume = volume;
+        if (backgroundPlayer != null) {
+            backgroundPlayer.setVolume(volume);
+        }
+    }
+
+    public double getVolume() {
+        return currentVolume;
+    }
+
+    public void setSfxVolume(double volume) {
+        this.sfxVolume = volume;
+
+        // Update all individual clips at once
+        hitSound.setVolume(volume);
+        destroySound.setVolume(volume);
+        powerupSound.setVolume(volume);
+        shootSound.setVolume(volume);
+        buySound.setVolume(volume);
+        burnSound.setVolume(volume);
+        freezeSound.setVolume(volume);
+        gameOverSound.setVolume(volume);
+    }
+
+    public double getSfxVolume() {
+        return sfxVolume;
     }
 
     public void playBurn() {

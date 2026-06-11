@@ -16,6 +16,7 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
+import javafx.scene.control.Slider;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -42,6 +43,9 @@ public class GameController {
 
     private Text editModeText;
     private EditModeManager editModeManager;
+
+    private VBox mainMenu;
+    private VBox optionsMenu;
 
     private int fireRoundsAvailable = 0;
     private boolean fireRoundActive = false;
@@ -123,6 +127,8 @@ public class GameController {
 
         setupUI();
         setupGameOverMenu();
+        setupMainMenu();
+        setupOptionsMenu();
 
         aimPath = new Polyline();
         aimPath.setStroke(Color.WHITE);
@@ -146,9 +152,8 @@ public class GameController {
         primaryStage.show();
         root.requestFocus();
 
-        balls.add(new Ball(startX, startY, root));
-        spawnRow();
-        updateRemainingBallsUI();
+        state = GameState.MAIN_MENU;
+        updateShopUI();
 
         AnimationTimer timer = new AnimationTimer() {
             @Override
@@ -242,6 +247,19 @@ public class GameController {
         remainingBallsText.setFont(Font.font("Arial", FontWeight.BOLD, 14));
         remainingBallsText.setFill(Color.WHITE);
         updateShopUI();
+
+        Button openOptionsBtn = new Button("⚙ Options");
+        openOptionsBtn.setLayoutX(20);
+        openOptionsBtn.setLayoutY(GameConfig.WINDOW_HEIGHT - 60);
+        openOptionsBtn.setStyle("-fx-background-color: #7f8c8d; -fx-text-fill: white; -fx-font-weight: bold;");
+        openOptionsBtn.setOnAction(e -> {
+            if (state == GameState.AIMING || state == GameState.WAITING) {
+                state = GameState.PAUSED;
+                optionsMenu.toFront();
+                optionsMenu.setVisible(true);
+            }
+        });
+
         root.getChildren().addAll(
                 waveText,
                 highScoreText,
@@ -250,7 +268,8 @@ public class GameController {
                 upgradeDamageBtn,
                 upgradePowerUpBtn,
                 upgradeCoinRewardBtn,
-                remainingBallsText
+                remainingBallsText,
+                openOptionsBtn
         );
     }
 
@@ -1128,7 +1147,7 @@ public class GameController {
         updateRemainingBallsUI();
     }
 
-    private void resetGame() {
+    private void clearBoard() {
         for (Block b : blocks) b.remove();
         blocks.clear();
 
@@ -1136,6 +1155,10 @@ public class GameController {
             root.getChildren().remove(b.circle);
         }
         balls.clear();
+    }
+
+    private void resetGame() {
+        clearBoard();
 
         wave = 1;
         totalBalls = 1;
@@ -1167,9 +1190,6 @@ public class GameController {
         shrinkRoundActive = false;
         forceShrinkRound = false;
 
-
-
-
         startX = GameConfig.PLAYFIELD_MIN_X + (GameConfig.PLAYFIELD_WIDTH / 2.0);
         nextStartX = startX;
 
@@ -1181,8 +1201,10 @@ public class GameController {
         updateRemainingBallsUI();
 
         gameOverMenu.setVisible(false);
-        state = GameState.AIMING;
+        mainMenu.setVisible(false);
+        optionsMenu.setVisible(false);
 
+        state = GameState.AIMING;
         soundManager.playBackgroundMusic();
     }
 
@@ -1418,8 +1440,7 @@ public class GameController {
         endWave();
     }
 
-    // Add these suffixes near the top of your GameController with your other variables
-    private static final String[] SUFFIXES = {"", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc"};
+    private static final String[] SUFFIXES = {"", "K", "M", "B", "T", "Qa"}; // 不夠再加
 
     public static String formatBigNumber(int number) {
         if (number < 1000) return "" + number;
@@ -1428,5 +1449,87 @@ public class GameController {
 
         double displayNum = number / Math.pow(1000, exponent);
         return String.format("%.2f%s", displayNum, SUFFIXES[exponent]);
+    }
+
+
+    private void setupMainMenu() {
+        mainMenu = new VBox(30);
+        mainMenu.setAlignment(Pos.CENTER);
+        mainMenu.setLayoutX(GameConfig.PLAYFIELD_MIN_X);
+        mainMenu.setLayoutY(GameConfig.PLAYFIELD_MIN_Y);
+        mainMenu.setPrefSize(GameConfig.PLAYFIELD_WIDTH, GameConfig.PLAYFIELD_HEIGHT);
+        mainMenu.setStyle("-fx-background-color: #0f0f1a;");
+
+        Text title = new Text("BLOCK BREAKER");
+        title.setFont(Font.font("Arial", FontWeight.BOLD, 45));
+        title.setFill(Color.web("#3498db"));
+
+        Button playBtn = new Button("Play Game");
+        playBtn.setFont(Font.font("Arial", FontWeight.BOLD, 24));
+        playBtn.setStyle("-fx-background-color: #2ecc71; -fx-text-fill: white; -fx-min-width: 200px;");
+        playBtn.setOnAction(e -> resetGame()); // resetGame handles starting the first wave
+
+        mainMenu.getChildren().addAll(title, playBtn);
+        root.getChildren().add(mainMenu);
+    }
+
+    private void setupOptionsMenu() {
+        optionsMenu = new VBox(25);
+        optionsMenu.setAlignment(Pos.CENTER);
+        optionsMenu.setLayoutX(GameConfig.PLAYFIELD_MIN_X);
+        optionsMenu.setLayoutY(GameConfig.PLAYFIELD_MIN_Y);
+        optionsMenu.setPrefSize(GameConfig.PLAYFIELD_WIDTH, GameConfig.PLAYFIELD_HEIGHT);
+        optionsMenu.setStyle("-fx-background-color: rgba(0, 0, 0, 0.90);");
+        optionsMenu.setVisible(false);
+
+        Text title = new Text("PAUSED");
+        title.setFont(Font.font("Arial", FontWeight.BOLD, 35));
+        title.setFill(Color.WHITE);
+
+        Text volumeText = new Text("Music Volume");
+        volumeText.setFont(Font.font("Arial", FontWeight.BOLD, 20));
+        volumeText.setFill(Color.LIGHTGRAY);
+
+        Slider volumeSlider = new Slider(0, 1, soundManager.getVolume());
+        volumeSlider.setMaxWidth(200);
+        volumeSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
+            soundManager.setVolume(newVal.doubleValue());
+        });
+
+        Text sfxText = new Text("SFX Volume");
+        sfxText.setFont(Font.font("Arial", FontWeight.BOLD, 20));
+        sfxText.setFill(Color.LIGHTGRAY);
+
+        Slider sfxSlider = new Slider(0, 1, soundManager.getSfxVolume());
+        sfxSlider.setMaxWidth(200);
+        sfxSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
+            soundManager.setSfxVolume(newVal.doubleValue());
+        });
+
+        Button resumeBtn = new Button("Resume");
+        resumeBtn.setFont(Font.font("Arial", FontWeight.BOLD, 18));
+        resumeBtn.setStyle("-fx-background-color: #2ecc71; -fx-text-fill: white; -fx-min-width: 180px;");
+        resumeBtn.setOnAction(e -> {
+            optionsMenu.setVisible(false);
+            state = GameState.AIMING;
+        });
+
+        Button restartBtn = new Button("Restart Game");
+        restartBtn.setFont(Font.font("Arial", FontWeight.BOLD, 18));
+        restartBtn.setStyle("-fx-background-color: #e67e22; -fx-text-fill: white; -fx-min-width: 180px;");
+        restartBtn.setOnAction(e -> resetGame());
+
+        Button quitBtn = new Button("Quit to Menu");
+        quitBtn.setFont(Font.font("Arial", FontWeight.BOLD, 18));
+        quitBtn.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-min-width: 180px;");
+        quitBtn.setOnAction(e -> {
+            optionsMenu.setVisible(false);
+            clearBoard();
+            mainMenu.setVisible(true);
+            state = GameState.MAIN_MENU;
+        });
+
+        optionsMenu.getChildren().addAll(title, volumeText, volumeSlider, sfxText, sfxSlider, resumeBtn, restartBtn, quitBtn);
+        root.getChildren().add(optionsMenu);
     }
 }
