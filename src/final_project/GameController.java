@@ -925,32 +925,28 @@ public class GameController {
 
     private void moveBlocksDownWithFreeze() {
         List<Block> sortedBlocks = new ArrayList<>(blocks);
-
-        // 從下面的方塊先處理，避免上面的方塊先移動穿過下面方塊
+        // 下至上
         sortedBlocks.sort((a, b) -> Double.compare(b.rect.getY(), a.rect.getY()));
 
         for (Block block : sortedBlocks) {
-            if (block.frozen || block.invincible) {
+            if (block.frozen) {
                 continue;
             }
 
-            double nextX = block.rect.getX();
             double nextY = block.rect.getY() + GameConfig.BLOCK_SIZE;
-            double nextW = block.rect.getWidth();
-            double nextH = block.rect.getHeight();
-
             boolean blocked = false;
 
             for (Block other : blocks) {
                 if (other == block) continue;
 
-                boolean overlap =
-                        nextX < other.rect.getX() + other.rect.getWidth()
-                                && nextX + nextW > other.rect.getX()
-                                && nextY < other.rect.getY() + other.rect.getHeight()
-                                && nextY + nextH > other.rect.getY();
+                // Add a tiny 0.1 buffer so flush edges aren't counted as an overlap
+                boolean overlapX = block.rect.getX() < other.rect.getX() + other.rect.getWidth() - 0.1 &&
+                        block.rect.getX() + block.rect.getWidth() > other.rect.getX() + 0.1;
 
-                if (overlap) {
+                boolean overlapY = nextY < other.rect.getY() + other.rect.getHeight() - 0.1 &&
+                        nextY + block.rect.getHeight() > other.rect.getY() + 0.1;
+
+                if (overlapX && overlapY) {
                     blocked = true;
                     break;
                 }
@@ -960,13 +956,13 @@ public class GameController {
                 block.shiftDown();
             }
         }
-
         for (Block block : blocks) {
             if (block.frozen) {
                 block.setFrozen(false);
             }
         }
     }
+
     private boolean isBlockAreaOccupied(double x, double y, double w, double h) {
         for (Block block : blocks) {
             boolean overlap =
@@ -1152,7 +1148,7 @@ public class GameController {
         moveBlocksDownWithFreeze();
 
         for (Block block : blocks) {
-            if (block.rect.getY() + GameConfig.BLOCK_SIZE >= GameConfig.WARNING_LINE_Y) {
+            if (block.rect.getY() + block.rect.getHeight() >= GameConfig.WARNING_LINE_Y) {
                 isGameOver = true;
             }
         }
@@ -1248,16 +1244,13 @@ public class GameController {
         double spawnY = GameConfig.PLAYFIELD_MIN_Y + GameConfig.BLOCK_SIZE;
 
         for (Block block : blocks) {
-
-            boolean touchesSpawnRow =
-                    block.rect.getY() < spawnY + GameConfig.BLOCK_SIZE &&
-                            block.rect.getY() + block.rect.getHeight() > spawnY;
-
+            // Checks if any part of the block's body is touching the top spawn row
+            boolean touchesSpawnRow = block.rect.getY() < spawnY + GameConfig.BLOCK_SIZE &&
+                    block.rect.getY() + block.rect.getHeight() > spawnY;
             if (touchesSpawnRow) {
                 return false;
             }
         }
-
         return true;
     }
 
@@ -1353,9 +1346,6 @@ public class GameController {
 
 
     private void spawnRow() {
-
-
-
         int columns = 8;
         boolean specialSpawned = false;
 
@@ -1432,13 +1422,17 @@ public class GameController {
             Block block = it.next();
 
             block.rect.setY(block.rect.getY() - GameConfig.BLOCK_SIZE);
-            block.text.setY(block.text.getY() - GameConfig.BLOCK_SIZE);
-
-            if (block.ring != null) {
-                block.ring.setCenterY(block.ring.getCenterY() - GameConfig.BLOCK_SIZE);
+            if (block.type == BlockType.BOSS && block.bossPane != null) {
+                block.bossPane.setLayoutY(block.rect.getY());
+            } else {
+                if (block.text != null) {
+                    block.text.setY(block.text.getY() - GameConfig.BLOCK_SIZE);
+                }
+                if (block.ring != null) {
+                    block.ring.setCenterY(block.ring.getCenterY() - GameConfig.BLOCK_SIZE);
+                }
             }
-
-            if (block.rect.getY() <= GameConfig.PLAYFIELD_MIN_Y + GameConfig.BLOCK_SIZE + 1) {
+            if (block.rect.getY() + block.rect.getHeight() <= GameConfig.PLAYFIELD_MIN_Y + GameConfig.BLOCK_SIZE + 1) {
                 block.remove();
                 it.remove();
             }
