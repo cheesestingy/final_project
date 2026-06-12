@@ -925,7 +925,6 @@ public class GameController {
 
     private void moveBlocksDownWithFreeze() {
         List<Block> sortedBlocks = new ArrayList<>(blocks);
-        // 下至上
         sortedBlocks.sort((a, b) -> Double.compare(b.rect.getY(), a.rect.getY()));
 
         for (Block block : sortedBlocks) {
@@ -939,7 +938,19 @@ public class GameController {
             for (Block other : blocks) {
                 if (other == block) continue;
 
-                // Add a tiny 0.1 buffer so flush edges aren't counted as an overlap
+                // 1. Check if the blocks are ALREADY overlapping before moving.
+                // If they spawned inside each other, ignore collision so they don't permanently lock.
+                boolean alreadyOverlapX = block.rect.getX() < other.rect.getX() + other.rect.getWidth() - 0.1 &&
+                        block.rect.getX() + block.rect.getWidth() > other.rect.getX() + 0.1;
+
+                boolean alreadyOverlapY = block.rect.getY() < other.rect.getY() + other.rect.getHeight() - 0.1 &&
+                        block.rect.getY() + block.rect.getHeight() > other.rect.getY() + 0.1;
+
+                if (alreadyOverlapX && alreadyOverlapY) {
+                    continue;
+                }
+
+                // 2. Standard AABB collision for the NEXT intended position
                 boolean overlapX = block.rect.getX() < other.rect.getX() + other.rect.getWidth() - 0.1 &&
                         block.rect.getX() + block.rect.getWidth() > other.rect.getX() + 0.1;
 
@@ -956,6 +967,7 @@ public class GameController {
                 block.shiftDown();
             }
         }
+
         for (Block block : blocks) {
             if (block.frozen) {
                 block.setFrozen(false);
@@ -1421,7 +1433,10 @@ public class GameController {
         while (it.hasNext()) {
             Block block = it.next();
 
+            // Shift the physical rectangle up
             block.rect.setY(block.rect.getY() - GameConfig.BLOCK_SIZE);
+
+            // Shift the UI components based on the specific block type
             if (block.type == BlockType.BOSS && block.bossPane != null) {
                 block.bossPane.setLayoutY(block.rect.getY());
             } else {
@@ -1432,6 +1447,8 @@ public class GameController {
                     block.ring.setCenterY(block.ring.getCenterY() - GameConfig.BLOCK_SIZE);
                 }
             }
+
+            // Wait to delete the block until its entire body is off the top of the screen
             if (block.rect.getY() + block.rect.getHeight() <= GameConfig.PLAYFIELD_MIN_Y + GameConfig.BLOCK_SIZE + 1) {
                 block.remove();
                 it.remove();
