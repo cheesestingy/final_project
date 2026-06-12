@@ -26,11 +26,9 @@ public class EditModeManager {
     private Text editText;
     private Pane root;
 
-    // --- Video Player Variables ---
     private MediaView mediaView;
     private MediaPlayer mediaPlayer;
 
-    // --- Konami Code Logic ---
     private final List<KeyCode> KONAMI_CODE = Arrays.asList(
             KeyCode.UP, KeyCode.UP, KeyCode.DOWN, KeyCode.DOWN,
             KeyCode.LEFT, KeyCode.RIGHT, KeyCode.LEFT, KeyCode.RIGHT,
@@ -41,7 +39,7 @@ public class EditModeManager {
     public EditModeManager(GameController game, Text editText, Pane root) {
         this.game = game;
         this.editText = editText;
-        this.root = root; // Save the root pane so we can attach the video
+        this.root = root;
         updateText();
     }
 
@@ -49,32 +47,25 @@ public class EditModeManager {
         scene.addEventFilter(KeyEvent.KEY_RELEASED, e -> {
 
             if (!editMode) {
-                // 1. Add the pressed key to our tracker
                 inputQueue.add(e.getCode());
-
-                // 2. If we have tracked more than 10 keys, forget the oldest one
                 if (inputQueue.size() > KONAMI_CODE.size()) {
                     inputQueue.remove(0);
                 }
 
-                // 3. Check if the tracked keys perfectly match the Konami Code
                 if (inputQueue.equals(KONAMI_CODE)) {
                     enableEditMode();
-                    inputQueue.clear(); // Reset the queue so it doesn't trigger twice
+                    inputQueue.clear();
                 }
-                return; // Ignore all other keys if Edit Mode is OFF
+                return;
             }
 
             // --- IF WE ARE ALREADY IN EDIT MODE ---
-
-            // Exit Edit Mode with 'E'
             if (e.getCode() == KeyCode.E) {
                 disableEditMode();
                 e.consume();
                 return;
             }
 
-            // Existing Controls
             if (e.getCode() == KeyCode.LEFT) {
                 ballTypeIndex--;
                 if (ballTypeIndex < 0) {
@@ -105,7 +96,7 @@ public class EditModeManager {
         editMode = true;
         applyBallType();
         updateText();
-        playSecretVideo(); // Start the MP4
+        playSecretVideo();
     }
 
     private void disableEditMode() {
@@ -143,7 +134,7 @@ public class EditModeManager {
     private void stopSecretVideo() {
         if (mediaPlayer != null) {
             mediaPlayer.stop();
-            root.getChildren().remove(mediaView); // Remove it from the screen
+            root.getChildren().remove(mediaView);
             mediaPlayer = null;
             mediaView = null;
         }

@@ -1433,10 +1433,8 @@ public class GameController {
         while (it.hasNext()) {
             Block block = it.next();
 
-            // Shift the physical rectangle up
             block.rect.setY(block.rect.getY() - GameConfig.BLOCK_SIZE);
 
-            // Shift the UI components based on the specific block type
             if (block.type == BlockType.BOSS && block.bossPane != null) {
                 block.bossPane.setLayoutY(block.rect.getY());
             } else {
@@ -1448,7 +1446,6 @@ public class GameController {
                 }
             }
 
-            // Wait to delete the block until its entire body is off the top of the screen
             if (block.rect.getY() + block.rect.getHeight() <= GameConfig.PLAYFIELD_MIN_Y + GameConfig.BLOCK_SIZE + 1) {
                 block.remove();
                 it.remove();
@@ -1514,7 +1511,7 @@ public class GameController {
         Button playBtn = new Button("Play Game");
         playBtn.setFont(Font.font("Arial", FontWeight.BOLD, 24));
         playBtn.setStyle("-fx-background-color: #2ecc71; -fx-text-fill: white; -fx-min-width: 200px;");
-        playBtn.setOnAction(e -> resetGame()); // resetGame handles starting the first wave
+        playBtn.setOnAction(e -> resetGame());
 
         mainMenu.getChildren().addAll(title, playBtn);
         root.getChildren().add(mainMenu);

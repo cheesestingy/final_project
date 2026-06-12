@@ -92,7 +92,6 @@ public class SoundManager {
     public void setSfxVolume(double volume) {
         this.sfxVolume = volume;
 
-        // Update all individual clips at once
         hitSound.setVolume(volume);
         destroySound.setVolume(volume);
         powerupSound.setVolume(volume);
